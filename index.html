@@ -1,28 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Can the Internet Guess My Bitcoin Wallet?</title>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyBn1DDEohNmJs9hjjyoVyeQB1lKeqyxIys",
+    authDomain: "btc-impossible.firebaseapp.com",
+    projectId: "btc-impossible",
+    storageBucket: "btc-impossible.firebasestorage.app",
+    messagingSenderId: "257524311855",
+    appId: "1:257524311855:web:11803c01b09bc3980223da",
+    measurementId: "G-42551CVEVL"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+
+  window.loadGlobalCount = async () => {
+    try {
+      const snap = await getDoc(doc(db, "stats", "global"));
+      return snap.exists() ? (snap.data().guesses || 0) : 0;
+    } catch { return 0; }
+  };
+
+  window.syncGlobalCount = async (delta) => {
+    try {
+      const ref = doc(db, "stats", "global");
+      await setDoc(ref, { guesses: increment(delta) }, { merge: true });
+      const snap = await getDoc(ref);
+      return snap.exists() ? (snap.data().guesses || 0) : 0;
+    } catch { return null; }
+  };
+
+  window.loadLeaderboard = async () => {
+    try {
+      const snap = await getDocs(collection(db, "leaderboard"));
+      return snap.docs
+        .map(d => d.data())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+    } catch { return []; }
+  };
+
+  window.submitToLeaderboard = async (name, count) => {
+    try {
+      const ref  = doc(db, "leaderboard", name);
+      const snap = await getDoc(ref);
+      const prev = snap.exists() ? (snap.data().count || 0) : 0;
+      await setDoc(ref, { name, count: prev + count, updated: Date.now() });
+      return true;
+    } catch { return false; }
+  };
+
+  window.firebaseReady = true;
+  window.dispatchEvent(new Event("firebaseReady"));
+</script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#080808}
-.app{background:#080808;min-height:100vh;color:#e8e8e8;font-family:system-ui,-apple-system,sans-serif;padding-bottom:60px}
-.hdr{position:sticky;top:0;z-index:20;background:rgba(8,8,8,0.9);backdrop-filter:blur(12px);border-bottom:1px solid #1e1e1e;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+html,body{background:#080808;min-height:100vh}
+body{color:#e8e8e8;font-family:system-ui,-apple-system,sans-serif;padding-bottom:60px}
+.hdr{position:sticky;top:0;z-index:20;background:rgba(8,8,8,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid #1e1e1e;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
 .hdr-title{font-weight:800;font-size:13px;letter-spacing:.1em;color:#555}
 .hdr-right{display:flex;align-items:center;gap:12px}
-.turbo-btn{border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;font-family:inherit}
+.turbo-btn{border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;
+  transition:all .15s;font-family:inherit;background:transparent;border:1px solid #333;color:#666}
 .content{max-width:840px;margin:0 auto;padding:40px 16px}
 .hero{text-align:center;margin-bottom:48px}
-.hero h1{font-size:clamp(28px,7vw,52px);font-weight:900;margin-bottom:14px;line-height:1.05;letter-spacing:-.02em;color:#e8e8e8}
+.hero h1{font-size:clamp(28px,7vw,52px);font-weight:900;margin-bottom:14px;
+  line-height:1.05;letter-spacing:-.02em;color:#e8e8e8}
 .hero p{color:#666;font-size:16px;max-width:500px;margin:0 auto;line-height:1.6}
 .card{background:#111;border:1px solid #1e1e1e;border-radius:20px;padding:26px;margin-bottom:16px}
 .section-lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
-.wallet-addr{font-family:monospace;font-size:clamp(11px,2vw,14px);color:#F7931A;background:#0c0800;padding:12px 16px;border-radius:10px;border:1px solid #2a1700;word-break:break-all;letter-spacing:.04em;line-height:1.6;cursor:pointer;transition:border-color .2s;user-select:all}
+.wallet-addr{font-family:monospace;font-size:clamp(11px,2vw,14px);color:#F7931A;background:#0c0800;
+  padding:12px 16px;border-radius:10px;border:1px solid #2a1700;word-break:break-all;
+  letter-spacing:.04em;line-height:1.6;cursor:pointer;transition:border-color .2s;user-select:all}
 .divider{display:flex;align-items:center;gap:12px;margin:18px 0}
 .divider-line{flex:1;height:1px;background:#1e1e1e}
 .divider-txt{font-family:monospace;font-size:13px;color:#555;white-space:nowrap}
 .phrase-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-.word-pill{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:8px;padding:9px 8px;font-family:monospace;font-size:13px;color:#888;display:flex;align-items:center;gap:5px;overflow:hidden;transition:background .08s,border-color .08s,color .08s}
+.word-pill{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:8px;padding:9px 8px;
+  font-family:monospace;font-size:13px;color:#888;display:flex;align-items:center;gap:5px;
+  overflow:hidden;transition:background .08s,border-color .08s,color .08s}
 .word-num{color:#2a2a2a;font-size:10px;min-width:16px;text-align:right;flex-shrink:0}
 .word-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.derived-addr{font-family:monospace;font-size:clamp(10px,1.8vw,13px);color:#252525;background:#0a0a0a;padding:10px 14px;border-radius:8px;border:1px solid #191919;word-break:break-all;letter-spacing:.03em}
-.no-match{text-align:center;padding:14px;background:#0c0c0c;border-radius:10px;border:1px solid #191919;transition:all .08s}
+.derived-addr{font-family:monospace;font-size:clamp(10px,1.8vw,13px);color:#252525;
+  background:#0a0a0a;padding:10px 14px;border-radius:8px;border:1px solid #191919;
+  word-break:break-all;letter-spacing:.03em}
+.no-match{text-align:center;padding:14px;background:#0c0c0c;border-radius:10px;
+  border:1px solid #191919;transition:all .08s}
 .no-match-txt{font-weight:900;font-size:18px;color:#222;letter-spacing:.2em;transition:color .08s}
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
 .stat-card{background:#111;border:1px solid #1e1e1e;border-radius:14px;padding:18px 12px;text-align:center}
@@ -30,202 +108,227 @@ body{background:#080808}
 .stat-val{font-family:monospace;font-size:clamp(14px,3vw,22px);font-weight:900;color:#F7931A;line-height:1}
 .stat-sub{font-size:11px;color:#333;margin-top:6px}
 .bignum{font-family:monospace;font-size:clamp(10px,2vw,13px);color:#F7931A;word-break:break-all;line-height:1.7}
-.bar-wrap{position:relative;background:#0a0a0a;border-radius:6px;height:22px;border:1px solid #1a1a1a;overflow:hidden}
+.bar-wrap{position:relative;background:#0a0a0a;border-radius:6px;height:22px;
+  border:1px solid #1a1a1a;overflow:hidden}
 .bar-fill{width:1px;height:100%;background:#3a1500}
-.bar-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#222;font-family:monospace;letter-spacing:.05em}
+.bar-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#222;font-family:monospace;letter-spacing:.05em}
 .comps-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .comp-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px}
 .comp-emoji{font-size:24px;margin-bottom:8px}
 .comp-title{font-size:13px;font-weight:700;color:#c0c0c0;margin-bottom:4px}
 .comp-val{font-family:monospace;font-size:14px;color:#F7931A;margin-bottom:6px}
 .comp-note{font-size:12px;color:#3a3a3a;line-height:1.4}
-.punchline{padding:18px 20px;background:#080e06;border:1px solid #162010;border-radius:12px;font-size:14px;line-height:1.7;color:#6a9a50;margin-top:20px}
-.lb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.punchline{padding:18px 20px;background:#080e06;border:1px solid #162010;border-radius:12px;
+  font-size:14px;line-height:1.7;color:#6a9a50;margin-top:20px}
+.lb-header{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:20px;flex-wrap:wrap;gap:10px}
 .lb-title{font-size:22px;font-weight:900;color:#e8e8e8}
-.submit-btn{background:#F7931A;border:none;color:#000;border-radius:10px;padding:8px 18px;cursor:pointer;font-weight:800;font-size:13px;font-family:inherit}
-.form-box{background:#0d0d0d;border:1px solid #222;border-radius:12px;padding:16px 18px;margin-bottom:18px}
+.submit-btn{background:#F7931A;border:none;color:#000;border-radius:10px;padding:8px 18px;
+  cursor:pointer;font-weight:800;font-size:13px;font-family:inherit}
+.form-box{background:#0d0d0d;border:1px solid #222;border-radius:12px;
+  padding:16px 18px;margin-bottom:18px;display:none}
 .form-row{display:flex;gap:8px;margin-top:10px}
-.name-input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#e8e8e8;font-size:14px;outline:none;font-family:inherit}
-.form-submit{background:#F7931A;color:#000;border:none;border-radius:8px;padding:10px 20px;font-weight:800;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
-.cancel-btn{background:transparent;border:1px solid #2a2a2a;color:#666;border-radius:8px;padding:10px 14px;cursor:pointer;font-family:inherit;font-size:14px}
+.name-input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:8px;
+  padding:10px 14px;color:#e8e8e8;font-size:14px;outline:none;font-family:inherit}
+.name-input:focus{border-color:#555}
+.form-submit{background:#F7931A;color:#000;border:none;border-radius:8px;
+  padding:10px 20px;font-weight:800;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
+.cancel-btn{background:transparent;border:1px solid #2a2a2a;color:#666;border-radius:8px;
+  padding:10px 14px;cursor:pointer;font-family:inherit;font-size:14px}
 .lb-empty{text-align:center;padding:40px 20px}
 .lb-empty-icon{font-size:44px;margin-bottom:12px}
-.lb-row{display:flex;align-items:center;gap:14px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:12px 18px;margin-bottom:8px}
-.lb-rank{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.lb-row{display:flex;align-items:center;gap:14px;background:#0d0d0d;border:1px solid #1a1a1a;
+  border-radius:12px;padding:12px 18px;margin-bottom:8px}
+.lb-rank{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 .lb-name{flex:1;font-weight:600;font-size:15px;color:#e8e8e8}
 .lb-count{font-family:monospace;color:#F7931A;font-size:15px;font-weight:700}
 .lb-unit{font-size:12px;color:#444;margin-left:4px}
-.turbo-overlay{background:#0c0900;border:1px solid #2a1900;border-radius:14px;padding:32px 24px;text-align:center;margin-bottom:18px}
-.footer{text-align:center;color:#2a2a2a;font-size:12px;padding-top:32px;line-height:1.8}
-.ok-badge{font-size:13px;color:#5a9}
+.turbo-overlay{background:#0c0900;border:1px solid #2a1900;border-radius:14px;
+  padding:32px 24px;text-align:center;margin-bottom:18px;display:none}
+.ok-badge{font-size:13px;color:#5a9;display:none}
+.inset-box{background:#090909;border-radius:12px;padding:14px 18px;margin-bottom:22px;border:1px solid #1a1a1a}
 .h2{font-size:22px;font-weight:900;color:#e8e8e8;margin-bottom:6px}
 .muted{color:#666;font-size:14px;margin-bottom:22px;line-height:1.5}
-.inset-box{background:#090909;border-radius:12px;padding:14px 18px;margin-bottom:22px;border:1px solid #1a1a1a}
+.footer{text-align:center;color:#2a2a2a;font-size:12px;padding-top:32px;line-height:1.8}
 @media(max-width:500px){
   .phrase-grid{grid-template-columns:repeat(3,1fr)}
-  .stats-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto auto}
+  .stats-grid{grid-template-columns:1fr 1fr}
   .stats-grid .stat-card:last-child{grid-column:1/-1}
   .comps-grid{grid-template-columns:1fr}
 }
 </style>
+</head>
+<body>
 
-<div class="app" id="app">
-  <div class="hdr">
-    <span class="hdr-title">₿ BITCOIN KEYSPACE CHALLENGE</span>
-    <div class="hdr-right">
-      <span class="ok-badge" id="ok-badge" style="display:none">✓ Submitted!</span>
-      <button class="turbo-btn" id="turbo-btn" style="background:transparent;border:1px solid #333;color:#666" onclick="toggleTurbo()">⚡ TURBO</button>
+<!-- ════════════════════════════════════════════
+     Change WALLET to your Bitcoin address
+     ════════════════════════════════════════════ -->
+
+<div class="hdr">
+  <span class="hdr-title">₿ BITCOIN KEYSPACE CHALLENGE</span>
+  <div class="hdr-right">
+    <span class="ok-badge" id="ok-badge">✓ Submitted!</span>
+    <button class="turbo-btn" id="turbo-btn" onclick="toggleTurbo()">⚡ TURBO</button>
+  </div>
+</div>
+
+<div class="content">
+  <div class="hero">
+    <h1>Can the Internet Guess<br><span style="color:#F7931A">My Bitcoin Wallet?</span></h1>
+    <p>Every attempt generates a genuine random 12-word seed phrase and checks if it unlocks the wallet below. It never will.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-lbl" style="color:#444">🔑 Target Wallet</div>
+    <div class="wallet-addr" id="wallet-addr" onclick="copyAddr()" title="Click to copy">
+      <!-- address inserted by JS -->
+      <span id="copy-hint" style="margin-left:10px;font-size:11px;color:#444;transition:color .2s">⌘C</span>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-txt" id="attempt-counter">Attempt #0</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="turbo-overlay" id="turbo-overlay">
+      <div style="font-size:38px;margin-bottom:10px">⚡</div>
+      <div style="color:#F7931A;font-weight:900;font-size:20px;margin-bottom:8px">TURBO MODE ACTIVE</div>
+      <div style="color:#666;font-size:14px">Display paused — counting at maximum speed</div>
+      <div style="font-family:monospace;color:#444;font-size:12px;margin-top:10px">≈ 5,000,000 guesses / second</div>
+    </div>
+
+    <div class="phrase-grid" id="phrase-grid"></div>
+
+    <div style="margin-bottom:16px">
+      <div class="section-lbl" style="color:#252525">→ Derived Address</div>
+      <div class="derived-addr" id="derived-addr">Computing...</div>
+    </div>
+
+    <div class="no-match" id="no-match-badge">
+      <span class="no-match-txt" id="no-match-txt">✗ &nbsp; NO MATCH</span>
     </div>
   </div>
 
-  <div class="content">
-    <div class="hero">
-      <h1>Can the Internet Guess<br><span style="color:#F7931A">My Bitcoin Wallet?</span></h1>
-      <p>Every attempt generates a genuine random 12-word seed phrase and checks if it unlocks the wallet below. It never will.</p>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-lbl">Your Session</div>
+      <div class="stat-val" id="stat-session">0</div>
+      <div class="stat-sub">guesses</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Global Total</div>
+      <div class="stat-val" id="stat-global">0</div>
+      <div class="stat-sub">all visitors</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Speed</div>
+      <div class="stat-val" id="stat-speed">~1,000</div>
+      <div class="stat-sub">guesses / sec</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="h2">Why It'll <span style="color:#F7931A">Never Work</span></div>
+    <div class="muted">A 12-word Bitcoin seed phrase has 2¹²⁸ possible combinations — a number that dwarfs human comprehension.</div>
+
+    <div class="inset-box">
+      <div class="section-lbl" style="color:#444">Total possible seed phrases — 2¹²⁸</div>
+      <div class="bignum">340,282,366,920,938,463,463,374,607,431,768,211,456</div>
     </div>
 
-    <div class="card">
-      <div class="section-lbl" style="color:#444">🔑 Target Wallet</div>
-      <div class="wallet-addr" id="wallet-addr" onclick="copyAddr()" title="Click to copy">
-        1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf8Na
-        <span id="copy-hint" style="margin-left:10px;font-size:11px;color:#444;transition:color .2s">⌘C</span>
+    <div style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <div class="section-lbl" style="color:#444">Keyspace Searched</div>
+        <div style="font-family:monospace;font-size:11px;color:#252525;max-width:60%;
+          text-align:right;word-break:break-all" id="perc-txt">0.000000000000000000000000000000000000000%</div>
       </div>
-
-      <div class="divider">
-        <div class="divider-line"></div>
-        <span class="divider-txt" id="attempt-counter">Attempt #0</span>
-        <div class="divider-line"></div>
+      <div class="bar-wrap">
+        <div class="bar-fill"></div>
+        <div class="bar-lbl">← YOU ARE HERE · THE BEGINNING · OF NOTHING</div>
       </div>
-
-      <div id="turbo-overlay" class="turbo-overlay" style="display:none">
-        <div style="font-size:38px;margin-bottom:10px">⚡</div>
-        <div style="color:#F7931A;font-weight:900;font-size:20px;margin-bottom:8px;letter-spacing:.05em">TURBO MODE ACTIVE</div>
-        <div style="color:#666;font-size:14px">Display paused — counting at maximum speed</div>
-        <div style="font-family:monospace;color:#444;font-size:12px;margin-top:10px">≈ 5,000,000 guesses / second</div>
-      </div>
-
-      <div class="phrase-grid" id="phrase-grid">
-      </div>
-
-      <div style="margin-bottom:16px">
-        <div class="section-lbl" style="color:#252525">→ Derived Address</div>
-        <div class="derived-addr" id="derived-addr">Computing...</div>
-      </div>
-
-      <div class="no-match" id="no-match-badge">
-        <span class="no-match-txt" id="no-match-txt">✗ &nbsp; NO MATCH</span>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-lbl">Your Session</div>
-        <div class="stat-val" id="stat-session">0</div>
-        <div class="stat-sub">guesses</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-lbl">Global Total</div>
-        <div class="stat-val" id="stat-global">0</div>
-        <div class="stat-sub">all visitors</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-lbl">Speed</div>
-        <div class="stat-val" id="stat-speed">~1,000</div>
-        <div class="stat-sub">guesses / sec</div>
+      <div style="font-size:11px;color:#222;margin-top:6px;text-align:center">
+        Every guess ever made in all of history wouldn't move this bar by a single pixel.
       </div>
     </div>
 
-    <div class="card">
-      <div class="h2">Why It'll <span style="color:#F7931A">Never Work</span></div>
-      <div class="muted">A 12-word Bitcoin seed phrase has 2¹²⁸ possible combinations — a number that dwarfs human comprehension.</div>
-
-      <div class="inset-box">
-        <div class="section-lbl" style="color:#444">Total possible seed phrases — 2¹²⁸</div>
-        <div class="bignum">340,282,366,920,938,463,463,374,607,431,768,211,456</div>
+    <div style="font-size:15px;font-weight:700;color:#555;margin-bottom:12px">Scale Comparisons</div>
+    <div class="comps-grid">
+      <div class="comp-card">
+        <div class="comp-emoji">🏖️</div>
+        <div class="comp-title">Grains of sand on Earth</div>
+        <div class="comp-val">7.5 × 10¹⁸</div>
+        <div class="comp-note">20 orders of magnitude fewer than 2¹²⁸</div>
       </div>
-
-      <div style="margin-bottom:24px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <div class="section-lbl" style="color:#444">Keyspace Searched</div>
-          <div style="font-family:monospace;font-size:11px;color:#252525;max-width:60%;text-align:right;word-break:break-all" id="perc-txt">0.000000000000000000000000000000000000000%</div>
-        </div>
-        <div class="bar-wrap">
-          <div class="bar-fill"></div>
-          <div class="bar-lbl">← YOU ARE HERE · THE BEGINNING · OF NOTHING</div>
-        </div>
-        <div style="font-size:11px;color:#222;margin-top:6px;text-align:center">Every guess ever made in all of history wouldn't move this bar by a single pixel.</div>
+      <div class="comp-card">
+        <div class="comp-emoji">⭐</div>
+        <div class="comp-title">Stars in observable universe</div>
+        <div class="comp-val">~10²⁴</div>
+        <div class="comp-note">14 orders of magnitude fewer than 2¹²⁸</div>
       </div>
-
-      <div style="font-size:15px;font-weight:700;color:#555;margin-bottom:12px">Scale Comparisons</div>
-      <div class="comps-grid">
-        <div class="comp-card">
-          <div class="comp-emoji">🏖️</div>
-          <div class="comp-title">Grains of sand on Earth</div>
-          <div class="comp-val">7.5 × 10¹⁸</div>
-          <div class="comp-note">20 orders of magnitude fewer than 2¹²⁸</div>
-        </div>
-        <div class="comp-card">
-          <div class="comp-emoji">⭐</div>
-          <div class="comp-title">Stars in observable universe</div>
-          <div class="comp-val">~10²⁴</div>
-          <div class="comp-note">14 orders of magnitude fewer than 2¹²⁸</div>
-        </div>
-        <div class="comp-card">
-          <div class="comp-emoji">⏱️</div>
-          <div class="comp-title">Seconds since the Big Bang</div>
-          <div class="comp-val">4.3 × 10¹⁷</div>
-          <div class="comp-note">21 orders of magnitude fewer than 2¹²⁸</div>
-        </div>
-        <div class="comp-card">
-          <div class="comp-emoji">⚛️</div>
-          <div class="comp-title">Atoms in the observable universe</div>
-          <div class="comp-val">~10⁸⁰</div>
-          <div class="comp-note">Comparable in scale to 2²⁵⁶ (24-word phrases)</div>
-        </div>
+      <div class="comp-card">
+        <div class="comp-emoji">⏱️</div>
+        <div class="comp-title">Seconds since the Big Bang</div>
+        <div class="comp-val">4.3 × 10¹⁷</div>
+        <div class="comp-note">21 orders of magnitude fewer than 2¹²⁸</div>
       </div>
-
-      <div class="punchline">
-        💡 <strong style="color:#7cb85e">The real lesson:</strong> Bitcoin isn't protected by a hard password.
-        It's protected by mathematics. If every atom in the universe were a supercomputer checking a trillion keys per second since the Big Bang — they'd have searched a fraction too small to write on this page.
+      <div class="comp-card">
+        <div class="comp-emoji">⚛️</div>
+        <div class="comp-title">Atoms in the observable universe</div>
+        <div class="comp-val">~10⁸⁰</div>
+        <div class="comp-note">Comparable in scale to 2²⁵⁶ (24-word phrases)</div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="lb-header">
-        <div class="lb-title">🏆 Top <span style="color:#F7931A">Guessers</span></div>
-        <button class="submit-btn" id="submit-score-btn" onclick="toggleForm()">+ Submit My Score</button>
-      </div>
+    <div class="punchline">
+      💡 <strong style="color:#7cb85e">The real lesson:</strong> Bitcoin isn't protected by a hard password.
+      It's protected by mathematics. If every atom in the universe were a supercomputer checking
+      a trillion keys per second since the Big Bang — they'd have searched a fraction too small to write on this page.
+    </div>
+  </div>
 
-      <div id="form-box" style="display:none" class="form-box">
-        <div style="font-size:13px;color:#666">Add your <strong id="form-count" style="color:#bbb">0</strong> guesses to the global leaderboard:</div>
-        <div class="form-row">
-          <input class="name-input" id="name-input" placeholder="Your name..." onkeydown="if(event.key==='Enter')submitScore()" />
-          <button class="form-submit" onclick="submitScore()">Submit</button>
-          <button class="cancel-btn" onclick="toggleForm()">✕</button>
-        </div>
-        <div style="font-size:11px;color:#333;margin-top:8px">Scores are publicly visible to all visitors.</div>
-      </div>
-
-      <div id="lb-empty" class="lb-empty">
-        <div class="lb-empty-icon">🔑</div>
-        <div style="color:#444;font-size:15px;margin-bottom:4px">No entries yet.</div>
-        <div style="color:#2a2a2a;font-size:13px">Be the first to submit your score!</div>
-      </div>
-
-      <div id="lb-list"></div>
+  <div class="card">
+    <div class="lb-header">
+      <div class="lb-title">🏆 Top <span style="color:#F7931A">Guessers</span></div>
+      <button class="submit-btn" id="submit-score-btn" onclick="toggleForm()">+ Submit My Score</button>
     </div>
 
-    <div class="footer">
-      All seed phrases are generated locally in your browser using cryptographically secure random numbers.<br>
-      Nothing is ever sent to a server. This is a purely educational demonstration.
+    <div class="form-box" id="form-box">
+      <div style="font-size:13px;color:#666">
+        Add your <strong id="form-count" style="color:#bbb">0</strong> guesses to the global leaderboard:
+      </div>
+      <div class="form-row">
+        <input class="name-input" id="name-input" placeholder="Your name..."
+          onkeydown="if(event.key==='Enter')submitScore()" />
+        <button class="form-submit" onclick="submitScore()">Submit</button>
+        <button class="cancel-btn" onclick="toggleForm()">✕</button>
+      </div>
+      <div style="font-size:11px;color:#333;margin-top:8px">Scores are publicly visible to all visitors.</div>
     </div>
+
+    <div class="lb-empty" id="lb-empty">
+      <div class="lb-empty-icon">🔑</div>
+      <div style="color:#444;font-size:15px;margin-bottom:4px">No entries yet.</div>
+      <div style="color:#2a2a2a;font-size:13px">Be the first to submit your score!</div>
+    </div>
+    <div id="lb-list"></div>
+  </div>
+
+  <div class="footer">
+    All seed phrases are generated locally in your browser using cryptographically secure random numbers.<br>
+    Nothing is ever sent to a server. This is a purely educational demonstration.
   </div>
 </div>
 
 <script>
+// ════════════════════════════════════════════
+// CHANGE THIS to your Bitcoin address
+// ════════════════════════════════════════════
 const WALLET = "1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf8Na";
-const O = "#F7931A";
 
+const O = "#F7931A";
 const WORDS = "abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby balance bamboo banana banner barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone book boost border boring borrow boss bottom bounce box brain brand brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble budget buffalo build bulb bulk bullet bundle burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp canal cancel candy cannon canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chief child chimney choice choose chronic chunk circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crazy cream credit creek crew cricket crime crisp critic cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark emerge emotion employ empty enable enact endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip erase erosion error erupt escape essay estate eternal ethics evidence evil evolve exact example excess exchange excite exclude exercise exhaust exhibit exile exist exit exotic expand expire explain expose express extend extra eye fable face faculty faint faith fall false fame family famous fan fancy fantasy far fashion fat fatal father fatigue fault favorite feature february federal fee feed feel feet field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guide guilt guitar gun gym habit hair half hammer hamster hand happy harsh harvest have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon ignore ill illegal image imitate immense immune impact impose improve impulse inbox income index indicate indoor industry infant inflict inform inhale inject inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab lamp language laptop large later laugh laundry lava law lawn lawsuit layer lazy leader learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury mad magic magnet maid main mammal mango mansion manual maple marble march margin marine market marriage mask master match material math matrix matter maximum maze meadow mean medal media melody melt member memory mention mentor menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle miss mitten model modify mom monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery naive name napkin narrow nasty nature near neck need negative neglect neither nephew nerve nest network news next nice night noble noise nominee noodle normal north notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure obtain ocean october odor off offer office often oil okay old olive olympic omit once onion open opera oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outside oval over own oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patrol pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp punch pupil puppy purchase purity purpose push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rage rail rain raise rally ramp ranch random range rapid rare rate rather raven reach ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save scale scan scatter scene scheme scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense series service session settle setup seven shadow shaft shallow share shed shell sheriff shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skill skin skirt skull slam sleep slender slice slide slight slim slogan slot slow slush smart smile smoke smooth snack snake snap sniff snow soap soccer social sock solar soldier solid solution solve someone song soon sorry soul sound soup source south space spare spatial spawn speak special speed sphere spice spider spike spin spirit split spoil sponsor spoon spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stop store storm story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such suddenly suffer suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise sustain swallow swamp swap swear sweet swift swim swing switch sword symbol symptom syrup table tackle tag tail talent tank tape target task tattoo teach team tell ten tenant tennis tent term test text thank that theme theory there they thing this thought three thrive throw thumb thunder ticket tilt timber time tiny tip tired title toast tobacco today together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome well west wet whale wheat wheel where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo".split(" ");
 
 let session = 0, global = 0, turbo = false;
@@ -234,6 +337,22 @@ let lastSync = 0, lsSyncCount = 0;
 let leaderboard = [];
 let showForm = false;
 let lastRaf = 0;
+let fbReady = false;
+
+// Set the wallet address in the DOM (keeps the copy-hint span intact)
+(function() {
+  const el = document.getElementById("wallet-addr");
+  const hint = document.getElementById("copy-hint");
+  el.insertBefore(document.createTextNode(WALLET + " "), hint);
+})();
+
+// Wait for Firebase module to finish loading
+window.addEventListener("firebaseReady", async () => {
+  fbReady = true;
+  await loadData();
+});
+// Fallback if Firebase fails to load (still show the counter locally)
+setTimeout(() => { if (!fbReady) { fbReady = true; } }, 5000);
 
 function randPhrase() {
   const a = new Uint16Array(12);
@@ -279,14 +398,10 @@ function renderPhrase(flash) {
 }
 
 function updateDisplay() {
-  const ac = document.getElementById("attempt-counter");
-  if (ac) ac.textContent = "Attempt #" + fmtN(session);
-  const ss = document.getElementById("stat-session");
-  if (ss) ss.textContent = fmtN(session);
-  const sg = document.getElementById("stat-global");
-  if (sg) sg.textContent = fmtN(global);
-  const pt = document.getElementById("perc-txt");
-  if (pt) pt.textContent = percStr(session);
+  document.getElementById("attempt-counter").textContent = "Attempt #" + fmtN(session);
+  document.getElementById("stat-session").textContent    = fmtN(session);
+  document.getElementById("stat-global").textContent     = fmtN(global);
+  document.getElementById("perc-txt").textContent        = percStr(session);
   const fc = document.getElementById("form-count");
   if (fc) fc.textContent = fmtN(session);
 }
@@ -296,18 +411,18 @@ function tick(ts) {
     if (ts - lastRaf > 150) {
       lastRaf = ts;
       phrase = randPhrase();
-      const da = deriveAddr(phrase);
       renderPhrase(true);
-      const addr = document.getElementById("derived-addr");
-      if (addr) addr.textContent = da;
-      const nm = document.getElementById("no-match-badge");
+      document.getElementById("derived-addr").textContent = deriveAddr(phrase);
+      const nm  = document.getElementById("no-match-badge");
       const nmt = document.getElementById("no-match-txt");
-      if (nm) nm.style.background = "#130000", nm.style.borderColor = "#3d0000";
-      if (nmt) nmt.style.color = "#c00";
+      nm.style.background   = "#130000";
+      nm.style.borderColor  = "#3d0000";
+      nmt.style.color       = "#c00";
       session += 150; global += 150;
       setTimeout(() => {
-        if (nm) nm.style.background = "#0c0c0c", nm.style.borderColor = "#191919";
-        if (nmt) nmt.style.color = "#222";
+        nm.style.background  = "#0c0c0c";
+        nm.style.borderColor = "#191919";
+        nmt.style.color      = "#222";
         renderPhrase(false);
       }, 90);
       updateDisplay();
@@ -317,46 +432,45 @@ function tick(ts) {
       lastRaf = ts;
       session += 50000; global += 50000;
     }
-    if (ts % 80 < 10) updateDisplay();
+    updateDisplay();
   }
-  syncStorage(ts);
+  syncToFirebase(ts);
   requestAnimationFrame(tick);
 }
 
-async function syncStorage(ts) {
-  if (ts - lastSync < 15000) return;
+async function syncToFirebase(ts) {
+  if (!fbReady) return;
+  if (ts - lastSync < 15000) return;   // sync every 15 seconds
   lastSync = ts;
   try {
-    const delta = session - lsSyncCount;
-    lsSyncCount = session;
-    const ex = await window.storage.get("btcv7g", true);
-    const base = ex ? (parseFloat(ex.value) || 0) : 0;
-    global = base + delta;
-    await window.storage.set("btcv7g", String(global), true);
+    const delta    = session - lsSyncCount;
+    lsSyncCount    = session;
+    const newTotal = await window.syncGlobalCount(delta);
+    if (newTotal !== null) global = newTotal;
   } catch {}
 }
 
-async function loadStorage() {
+async function loadData() {
   try {
-    const d = await window.storage.get("btcv7g", true);
-    if (d) global = parseFloat(d.value) || 0;
+    global = await window.loadGlobalCount();
+    updateDisplay();
   } catch {}
   try {
-    const d = await window.storage.get("btcv7l", true);
-    if (d) { leaderboard = JSON.parse(d.value) || []; renderLB(); }
+    const rows = await window.loadLeaderboard();
+    leaderboard = rows.map(r => ({ n: r.name, c: r.count }));
+    renderLB();
   } catch {}
 }
 
 function renderLB() {
-  const empty = document.getElementById("lb-empty");
-  const list = document.getElementById("lb-list");
-  if (!empty || !list) return;
+  const empty   = document.getElementById("lb-empty");
+  const list    = document.getElementById("lb-list");
+  const medals  = [O, "#888", "#9b6b2f"];
   if (leaderboard.length === 0) { empty.style.display = "block"; list.innerHTML = ""; return; }
   empty.style.display = "none";
-  const medals = [O, "#888", "#9b6b2f"];
   list.innerHTML = leaderboard.map((e, i) => `
-    <div class="lb-row" style="${i===0?"border-color:#2e1800":""}">
-      <div class="lb-rank" style="background:${medals[i]||"#1e1e1e"};color:${i<3?"#000":"#555"}">${i + 1}</div>
+    <div class="lb-row" style="${i === 0 ? "border-color:#2e1800" : ""}">
+      <div class="lb-rank" style="background:${medals[i] || "#1e1e1e"};color:${i < 3 ? "#000" : "#555"}">${i + 1}</div>
       <div class="lb-name">${e.n}</div>
       <div class="lb-count">${fmtN(e.c)}</div>
       <span class="lb-unit">guesses</span>
@@ -365,75 +479,81 @@ function renderLB() {
 
 function toggleTurbo() {
   turbo = !turbo;
-  const btn = document.getElementById("turbo-btn");
+  const btn     = document.getElementById("turbo-btn");
   const overlay = document.getElementById("turbo-overlay");
-  const grid = document.getElementById("phrase-grid");
-  const spd = document.getElementById("stat-speed");
-  if (btn) {
-    btn.style.background = turbo ? O : "transparent";
-    btn.style.border = turbo ? `1px solid ${O}` : "1px solid #333";
-    btn.style.color = turbo ? "#000" : "#666";
-    btn.textContent = turbo ? "⚡ TURBO ON" : "⚡ TURBO";
-  }
-  if (overlay) overlay.style.display = turbo ? "block" : "none";
-  if (grid) grid.style.display = turbo ? "none" : "grid";
-  if (spd) spd.textContent = turbo ? "~5,000,000" : "~1,000";
+  const grid    = document.getElementById("phrase-grid");
+  btn.style.background = turbo ? O : "transparent";
+  btn.style.border     = turbo ? `1px solid ${O}` : "1px solid #333";
+  btn.style.color      = turbo ? "#000" : "#666";
+  btn.textContent      = turbo ? "⚡ TURBO ON" : "⚡ TURBO";
+  overlay.style.display = turbo ? "block" : "none";
+  grid.style.display    = turbo ? "none"  : "grid";
+  document.getElementById("stat-speed").textContent = turbo ? "~5,000,000" : "~1,000";
 }
 
 function toggleForm() {
   showForm = !showForm;
-  const fb = document.getElementById("form-box");
+  const fb  = document.getElementById("form-box");
   const btn = document.getElementById("submit-score-btn");
-  if (fb) fb.style.display = showForm ? "block" : "none";
-  if (btn) {
-    btn.style.background = showForm ? "transparent" : O;
-    btn.style.border = showForm ? "1px solid #2a2a2a" : "none";
-    btn.style.color = showForm ? "#666" : "#000";
-    btn.textContent = showForm ? "✕ Cancel" : "+ Submit My Score";
-  }
-  if (showForm) {
-    const fc = document.getElementById("form-count");
-    if (fc) fc.textContent = fmtN(session);
-  }
+  fb.style.display   = showForm ? "block" : "none";
+  btn.style.background = showForm ? "transparent" : O;
+  btn.style.border     = showForm ? "1px solid #2a2a2a" : "none";
+  btn.style.color      = showForm ? "#666" : "#000";
+  btn.textContent      = showForm ? "✕ Cancel" : "+ Submit My Score";
+  if (showForm) document.getElementById("form-count").textContent = fmtN(session);
 }
 
 async function submitScore() {
-  const ni = document.getElementById("name-input");
-  const name = ni ? ni.value.trim() : "";
+  const ni   = document.getElementById("name-input");
+  const name = ni.value.trim();
   if (!name) return;
+
+  // Optimistic UI update first
+  let lb  = [...leaderboard];
+  const idx = lb.findIndex(e => e.n === name);
+  if (idx >= 0) lb[idx].c += session;
+  else lb.push({ n: name, c: session });
+  lb.sort((a, b) => b.c - a.c);
+  leaderboard = lb.slice(0, 15);
+  renderLB();
+
+  // Then persist to Firebase
+  try { await window.submitToLeaderboard(name, session); } catch {}
+
+  // Refresh from Firebase to get accurate merged scores
   try {
-    let lb = [...leaderboard];
-    const idx = lb.findIndex(e => e.n === name);
-    if (idx >= 0) lb[idx].c += session;
-    else lb.push({ n: name, c: session });
-    lb.sort((a, b) => b.c - a.c);
-    lb = lb.slice(0, 15);
-    leaderboard = lb;
-    await window.storage.set("btcv7l", JSON.stringify(lb), true);
+    const rows  = await window.loadLeaderboard();
+    leaderboard = rows.map(r => ({ n: r.name, c: r.count }));
     renderLB();
   } catch {}
-  if (ni) ni.value = "";
+
+  ni.value = "";
   toggleForm();
   const ok = document.getElementById("ok-badge");
-  if (ok) { ok.style.display = "inline"; setTimeout(() => ok.style.display = "none", 3000); }
+  ok.style.display = "inline";
+  setTimeout(() => ok.style.display = "none", 3000);
 }
 
 function copyAddr() {
   navigator.clipboard.writeText(WALLET).then(() => {
     const hint = document.getElementById("copy-hint");
     const addr = document.getElementById("wallet-addr");
-    if (hint) { hint.textContent = "✓ copied"; hint.style.color = O; }
-    if (addr) addr.style.borderColor = O + "55";
+    hint.textContent    = "✓ copied";
+    hint.style.color    = O;
+    addr.style.borderColor = O + "55";
     setTimeout(() => {
-      if (hint) { hint.textContent = "⌘C"; hint.style.color = "#444"; }
-      if (addr) addr.style.borderColor = "#2a1700";
+      hint.textContent   = "⌘C";
+      hint.style.color   = "#444";
+      addr.style.borderColor = "#2a1700";
     }, 2000);
   }).catch(() => {});
 }
 
+// Boot
 renderPhrase(false);
-const initialDerived = document.getElementById("derived-addr");
-if (initialDerived) initialDerived.textContent = deriveAddr(phrase);
-loadStorage();
+document.getElementById("derived-addr").textContent = deriveAddr(phrase);
 requestAnimationFrame(tick);
 </script>
+
+</body>
+</html>
