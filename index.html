@@ -353,6 +353,8 @@ window.addEventListener("firebaseReady", async () => {
   fbReady = true;
   await loadData();
 });
+// If firebase was ready before this listener attached, handle it now
+if (window.firebaseReady) { fbReady = true; loadData().catch(()=>{}); }
 // Fallback if Firebase fails to load (still show the counter locally)
 setTimeout(() => { if (!fbReady) { fbReady = true; } }, 5000);
 
