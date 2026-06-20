@@ -272,12 +272,33 @@ function updateHoverCell(e){
 
 function typeAsciiCharacterAtHover(ch){
     const pattern = STANDARD_FONT[ch];
+
     for(let py = 0; py < CHAR_H; py++){
         for(let px = 0; px < CHAR_W; px++){
             const bit = (pattern[py] >> (CHAR_W - 1 - px)) & 1;
-            pixels[hoverCharY * CHAR_H + py][hoverCharX * CHAR_W + px] = bit;
+
+            pixels[
+                hoverCharY * CHAR_H + py
+            ][
+                hoverCharX * CHAR_W + px
+            ] = bit;
         }
     }
+
+    // Move to next character position
+    hoverCharX++;
+
+    // End of line -> go to next row
+    if (hoverCharX >= LCD_COLS) {
+        hoverCharX = 0;
+        hoverCharY++;
+    }
+
+    // End of screen -> wrap back to top-left
+    if (hoverCharY >= LCD_ROWS) {
+        hoverCharY = 0;
+    }
+
     draw();
 }
 
