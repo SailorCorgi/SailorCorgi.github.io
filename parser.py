@@ -1,5 +1,5 @@
 #Example of how to parse .lcd files 
-#based on how im doing it in project
+#based on how im doing it in project on a esp32
 from machine import Pin, I2C
 from i2c_lcd import LCD_I2C
 import time
