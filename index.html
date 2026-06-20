@@ -929,82 +929,95 @@ function parseBitmapDump(text) {
 
 function parseLcdFile(text) {
     const lines = text.split('\n');
-    
-    // Find grid section
-    let gridStartIdx = -1;
-    for(let i=0; i<lines.length; i++) {
-        const line = lines[i].trim();
-        if(line.startsWith('# GRID:')) {
-            gridStartIdx = i;
-            break;
-        }
-    }
-    
-    if(gridStartIdx === -1) return false; // Not a valid .lcd file
-    
-    // Parse custom chars (if they exist before GRID section)
     const customChars = [];
-    for(let i=0; i<gridStartIdx; i++) {
-        const line = lines[i].trim();
-        if(line.startsWith('B')) {
-            const binary = line.substring(1);
-            const value = parseInt(binary, 2);
-            
-            if(customChars.length === 0 || customChars[customChars.length - 1].length < CHAR_H) {
-                if(customChars.length === 0 || customChars[customChars.length - 1].length === CHAR_H) {
-                    customChars.push([]);
+    const gridRows = [];
+    let currentBitmap = [];
+    let mode = null;
+
+    for(let i=0; i<lines.length; i++) {
+        const raw = lines[i];
+        const line = raw.trim();
+        if(!line) continue;
+
+        if(line.startsWith('#')) {
+            if(line.startsWith('# LCD ART EXPORT')) {
+                mode = 'chars';
+            } else if(line.startsWith('# CUSTOM CHARS')) {
+                mode = 'chars';
+            } else if(line.startsWith('# GRID:')) {
+                mode = 'grid';
+            }
+            continue;
+        }
+
+        if(mode === 'chars') {
+            if(line.startsWith('B')) {
+                const value = parseInt(line.substring(1), 2);
+                if(!Number.isNaN(value)) {
+                    if(currentBitmap.length === CHAR_H) {
+                        customChars.push(currentBitmap);
+                        currentBitmap = [];
+                    }
+                    currentBitmap.push(value);
                 }
             }
-            customChars[customChars.length - 1].push(value);
+        } else if(mode === 'grid') {
+            const codes = line.split(/\s+/).map(c => parseInt(c, 10)).filter(c => !Number.isNaN(c));
+            if(codes.length > 0) gridRows.push(codes);
+        } else if(line.startsWith('B')) {
+            // Fallback: parse custom chars even if header lines were omitted
+            const value = parseInt(line.substring(1), 2);
+            if(!Number.isNaN(value)) {
+                if(currentBitmap.length === CHAR_H) {
+                    customChars.push(currentBitmap);
+                    currentBitmap = [];
+                }
+                currentBitmap.push(value);
+            }
         }
     }
-    
+
+    if(currentBitmap.length === CHAR_H) {
+        customChars.push(currentBitmap);
+    }
+    if(gridRows.length === 0) return false;
+
     // Clear pixels
     for(let y=0; y<HEIGHT; y++){
         for(let x=0; x<WIDTH; x++){
             pixels[y][x] = 0;
         }
     }
-    
-    // Parse grid data
+
     let cellIdx = 0;
-    for(let i=gridStartIdx+1; i<lines.length; i++) {
-        const line = lines[i].trim();
-        if(!line || line.startsWith('#')) continue;
-        
-        const codes = line.split(/\s+/).map(c => {
-            const n = parseInt(c);
-            return isNaN(n) ? -1 : n;
-        }).filter(c => c >= 0);
-        
-        for(let code of codes) {
+    for(let rowIndex=0; rowIndex<gridRows.length; rowIndex++) {
+        const codes = gridRows[rowIndex];
+        for(let j=0; j<codes.length; j++) {
             if(cellIdx >= LCD_COLS * LCD_ROWS) break;
-            
+
+            const code = codes[j];
             const charX = cellIdx % LCD_COLS;
             const charY = Math.floor(cellIdx / LCD_COLS);
-            
             let pattern;
+
             if(code >= 0 && code <= 7 && code < customChars.length) {
-                // Custom char
                 pattern = customChars[code];
             } else {
-                // ASCII character
                 const ch = String.fromCharCode(code);
                 pattern = STANDARD_FONT[ch] || STANDARD_FONT[' '];
             }
-            
-            // Fill pixels for this character
+
             for(let py=0; py<CHAR_H; py++) {
                 for(let px=0; px<CHAR_W; px++) {
                     const bit = (pattern[py] >> (CHAR_W - 1 - px)) & 1;
                     pixels[charY * CHAR_H + py][charX * CHAR_W + px] = bit;
                 }
             }
-            
+
             cellIdx++;
         }
     }
-    
+
     return true;
 }
 
