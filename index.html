@@ -884,6 +884,158 @@ function downloadMicropythonFile(){
     URL.revokeObjectURL(url);
 }
 
+/* =====================================================================
+   LOAD BITMAP DATA OR .LCD FILE
+   ===================================================================== */
+
+function parseBitmapDump(text) {
+    const lines = text.split('\n');
+    const binaryLines = lines.filter(line => line.trim().startsWith('B'));
+    
+    if (binaryLines.length === 0) return false;
+    
+    // Clear pixels
+    for(let y=0; y<HEIGHT; y++){
+        for(let x=0; x<WIDTH; x++){
+            pixels[y][x] = 0;
+        }
+    }
+    
+    let charIndex = 0;
+    for(let i=0; i<binaryLines.length; i += CHAR_H) {
+        const charX = charIndex % LCD_COLS;
+        const charY = Math.floor(charIndex / LCD_COLS);
+        
+        if(charY >= LCD_ROWS) break;
+        
+        // Get 8 rows for this character
+        for(let row=0; row<CHAR_H && i+row<binaryLines.length; row++) {
+            const line = binaryLines[i + row].trim();
+            const binary = line.substring(1); // Remove 'B' prefix
+            const value = parseInt(binary, 2);
+            
+            // Fill pixels for this row
+            for(let col=0; col<CHAR_W; col++) {
+                const bit = (value >> (CHAR_W - 1 - col)) & 1;
+                pixels[charY * CHAR_H + row][charX * CHAR_W + col] = bit;
+            }
+        }
+        
+        charIndex++;
+    }
+    
+    return true;
+}
+
+function parseLcdFile(text) {
+    const lines = text.split('\n');
+    
+    // Find grid section
+    let gridStartIdx = -1;
+    for(let i=0; i<lines.length; i++) {
+        const line = lines[i].trim();
+        if(line.startsWith('# GRID:')) {
+            gridStartIdx = i;
+            break;
+        }
+    }
+    
+    if(gridStartIdx === -1) return false; // Not a valid .lcd file
+    
+    // Parse custom chars (if they exist before GRID section)
+    const customChars = [];
+    for(let i=0; i<gridStartIdx; i++) {
+        const line = lines[i].trim();
+        if(line.startsWith('B')) {
+            const binary = line.substring(1);
+            const value = parseInt(binary, 2);
+            
+            if(customChars.length === 0 || customChars[customChars.length - 1].length < CHAR_H) {
+                if(customChars.length === 0 || customChars[customChars.length - 1].length === CHAR_H) {
+                    customChars.push([]);
+                }
+            }
+            customChars[customChars.length - 1].push(value);
+        }
+    }
+    
+    // Clear pixels
+    for(let y=0; y<HEIGHT; y++){
+        for(let x=0; x<WIDTH; x++){
+            pixels[y][x] = 0;
+        }
+    }
+    
+    // Parse grid data
+    let cellIdx = 0;
+    for(let i=gridStartIdx+1; i<lines.length; i++) {
+        const line = lines[i].trim();
+        if(!line || line.startsWith('#')) continue;
+        
+        const codes = line.split(/\s+/).map(c => {
+            const n = parseInt(c);
+            return isNaN(n) ? -1 : n;
+        }).filter(c => c >= 0);
+        
+        for(let code of codes) {
+            if(cellIdx >= LCD_COLS * LCD_ROWS) break;
+            
+            const charX = cellIdx % LCD_COLS;
+            const charY = Math.floor(cellIdx / LCD_COLS);
+            
+            let pattern;
+            if(code >= 0 && code <= 7 && code < customChars.length) {
+                // Custom char
+                pattern = customChars[code];
+            } else {
+                // ASCII character
+                const ch = String.fromCharCode(code);
+                pattern = STANDARD_FONT[ch] || STANDARD_FONT[' '];
+            }
+            
+            // Fill pixels for this character
+            for(let py=0; py<CHAR_H; py++) {
+                for(let px=0; px<CHAR_W; px++) {
+                    const bit = (pattern[py] >> (CHAR_W - 1 - px)) & 1;
+                    pixels[charY * CHAR_H + py][charX * CHAR_W + px] = bit;
+                }
+            }
+            
+            cellIdx++;
+        }
+    }
+    
+    return true;
+}
+
+function loadFromTextarea() {
+    const text = document.getElementById("output").value.trim();
+    if(text.length === 0) return;
+    
+    // Try to parse as .lcd file first (more specific format)
+    if(text.includes('# GRID:')) {
+        if(parseLcdFile(text)) {
+            draw();
+            return;
+        }
+    }
+    
+    // Try to parse as bitmap dump
+    if(parseBitmapDump(text)) {
+        draw();
+        return;
+    }
+}
+
+// Add event listener to load data when pasted/edited
+let loadTimeout;
+document.getElementById("output").addEventListener('input', () => {
+    clearTimeout(loadTimeout);
+    loadTimeout = setTimeout(() => {
+        loadFromTextarea();
+    }, 500); // Wait 500ms after user stops typing before attempting to parse
+});
+
 </script>
 </body>
 </html>
