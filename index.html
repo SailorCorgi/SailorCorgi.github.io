@@ -81,6 +81,17 @@ Each LCD character is 5&times;8 pixels.
 The display is 20&times;4 characters (100&times;32 pixels total).
 </p>
 
+<div style="background-color: #f5f5f5; border-left: 4px solid #007acc; padding: 10px; margin-bottom: 15px; font-family: sans-serif; font-size: 0.9em;">
+  <strong>Controls & Keybinds:</strong>
+  <ul style="margin: 5px 0 0 20px; padding: 0;">
+    <li><strong>Left Click:</strong> Draw pixel</li>
+    <li><strong>Right Click:</strong> Erase pixel</li>
+    <li><strong>Ctrl + Right Click:</strong> Fill character box</li>
+    <li><strong>Space / Shift + Right Click:</strong> Clear character box</li>
+    <li><strong>Typing:</strong> Type text directly into characters</li>
+  </ul>
+</div>
+
 <canvas id="lcd" width="1000" height="320"></canvas>
 
 <br>
@@ -168,6 +179,18 @@ function draw(){
         }
     }
 
+    if(selection){
+        ctx.strokeStyle = "rgba(0, 0, 255, 0.8)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+            selection.x * PIXEL_SIZE + 1,
+            selection.y * PIXEL_SIZE + 1,
+            selection.width * PIXEL_SIZE - 2,
+            selection.height * PIXEL_SIZE - 2
+        );
+        ctx.lineWidth = 1;
+    }
+
     if(hoverCharX >= 0 && hoverCharY >= 0){
         ctx.strokeStyle = "rgba(0, 0, 255, 0.8)";
         ctx.lineWidth = 2;
@@ -205,6 +228,75 @@ let mouseDown = false;
 let currentButton = 0;
 let hoverCharX = -1;
 let hoverCharY = -1;
+let selection = null;
+let selectionAnchor = null;
+let selectionDrag = false;
+// selection {
+//   x,
+//   y,
+//   width,
+//   height
+// }
+
+function normalizeSelection(x1, y1, x2, y2){
+    const x = Math.min(x1, x2);
+    const y = Math.min(y1, y2);
+    return {
+        x,
+        y,
+        width: Math.max(1, Math.abs(x2 - x1) + 1),
+        height: Math.max(1, Math.abs(y2 - y1) + 1)
+    };
+}
+
+function setSelectionArea(x1, y1, x2, y2){
+    selection = normalizeSelection(x1, y1, x2, y2);
+}
+
+function moveSelection(dx, dy){
+    if(!selection) return;
+
+    const newX = selection.x + dx;
+    const newY = selection.y + dy;
+    if(newX < 0 || newY < 0 || newX + selection.width > WIDTH || newY + selection.height > HEIGHT) return;
+
+    const buffer = [];
+    for(let sy = 0; sy < selection.height; sy++){
+        buffer[sy] = [];
+        for(let sx = 0; sx < selection.width; sx++){
+            buffer[sy][sx] = pixels[selection.y + sy][selection.x + sx];
+        }
+    }
+
+    for(let sy = 0; sy < selection.height; sy++){
+        for(let sx = 0; sx < selection.width; sx++){
+            pixels[selection.y + sy][selection.x + sx] = 0;
+        }
+    }
+
+    for(let sy = 0; sy < selection.height; sy++){
+        for(let sx = 0; sx < selection.width; sx++){
+            pixels[newY + sy][newX + sx] = buffer[sy][sx];
+        }
+    }
+
+    selection = { x: newX, y: newY, width: selection.width, height: selection.height };
+    draw();
+}
+
+function startSelection(pixelX, pixelY){
+    selectionAnchor = { x: pixelX, y: pixelY };
+    setSelectionArea(pixelX, pixelY, pixelX, pixelY);
+    selectionDrag = true;
+    draw();
+}
+
+function updateSelection(pixelX, pixelY){
+    if(selectionDrag && selectionAnchor){
+        setSelectionArea(selectionAnchor.x, selectionAnchor.y, pixelX, pixelY);
+        draw();
+    }
+}
 
 // Disable browser context menu
 canvas.addEventListener("contextmenu", e => {
@@ -214,15 +306,39 @@ canvas.addEventListener("contextmenu", e => {
 canvas.addEventListener("mousedown", e => {
     e.preventDefault();
 
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+
+    if(x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) return;
+
+    const pixelX = x;
+    const pixelY = y;
+
     mouseDown = true;
     currentButton = e.button;
+
+    if(e.button === 0 && e.ctrlKey){
+        startSelection(pixelX, pixelY);
+        return;
+    }
 
     paint(e);
 });
 
 canvas.addEventListener("mousemove", e => {
     updateHoverCell(e);
-    if(mouseDown){
+    if(!mouseDown) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+
+    if(x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) return;
+
+    if(selectionDrag){
+        updateSelection(x, y);
+    } else {
         paint(e);
     }
 });
@@ -234,13 +350,36 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 window.addEventListener("mouseup", () => {
+    if(selectionDrag) selectionDrag = false;
     mouseDown = false;
 });
 
 window.addEventListener("keydown", e => {
     if(!canvas.contains(document.activeElement) && document.activeElement !== document.body) return;
-    if(hoverCharX < 0 || hoverCharY < 0) return;
+
+    if(selection && e.ctrlKey){
+        switch (e.key) {
+            case "ArrowLeft":
+                moveSelection(-1, 0);
+                e.preventDefault();
+                return;
+            case "ArrowRight":
+                moveSelection(1, 0);
+                e.preventDefault();
+                return;
+            case "ArrowUp":
+                moveSelection(0, -1);
+                e.preventDefault();
+                return;
+            case "ArrowDown":
+                moveSelection(0, 1);
+                e.preventDefault();
+                return;
+        }
+    }
+
     if(e.ctrlKey || e.altKey || e.metaKey) return;
+    if(hoverCharX < 0 || hoverCharY < 0) return;
     if(e.key.length !== 1) return;
     if(!STANDARD_FONT[e.key]) return;
 
