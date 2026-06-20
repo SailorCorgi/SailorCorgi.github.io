@@ -1,564 +1,868 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Can the Internet Guess My Bitcoin Wallet?</title>
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
-  import { getFirestore, doc, getDoc, setDoc, getDocs, collection, increment } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyBn1DDEohNmJs9hjjyoVyeQB1lKeqyxIys",
-    authDomain: "btc-impossible.firebaseapp.com",
-    projectId: "btc-impossible",
-    storageBucket: "btc-impossible.firebasestorage.app",
-    messagingSenderId: "257524311855",
-    appId: "1:257524311855:web:11803c01b09bc3980223da",
-    measurementId: "G-42551CVEVL"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
-
-  window.loadGlobalCount = async () => {
-    try {
-      const snap = await getDoc(doc(db, "stats", "global"));
-      return snap.exists() ? (snap.data().guesses || 0) : 0;
-    } catch { return 0; }
-  };
-
-  window.syncGlobalCount = async (delta) => {
-    try {
-      const ref = doc(db, "stats", "global");
-      await setDoc(ref, { guesses: increment(delta) }, { merge: true });
-      const snap = await getDoc(ref);
-      return snap.exists() ? (snap.data().guesses || 0) : 0;
-    } catch { return null; }
-  };
-
-  window.loadLeaderboard = async () => {
-    try {
-      const snap = await getDocs(collection(db, "leaderboard"));
-      return snap.docs
-        .map(d => d.data())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 15);
-    } catch { return []; }
-  };
-
-  window.submitToLeaderboard = async (name, count) => {
-    try {
-      const ref  = doc(db, "leaderboard", name);
-      const snap = await getDoc(ref);
-      const prev = snap.exists() ? (snap.data().count || 0) : 0;
-      await setDoc(ref, { name, count: prev + count, updated: Date.now() });
-      return true;
-    } catch { return false; }
-  };
-
-  window.firebaseReady = true;
-  window.dispatchEvent(new Event("firebaseReady"));
-</script>
-
+<meta charset="utf-8">
+<title>20x4 LCD Character Designer</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#080808;min-height:100vh}
-body{color:#e8e8e8;font-family:system-ui,-apple-system,sans-serif;padding-bottom:60px}
-.hdr{position:sticky;top:0;z-index:20;background:rgba(8,8,8,0.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid #1e1e1e;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
-.hdr-title{font-weight:800;font-size:13px;letter-spacing:.1em;color:#555}
-.hdr-right{display:flex;align-items:center;gap:12px}
-.turbo-btn{border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;
-  transition:all .15s;font-family:inherit;background:transparent;border:1px solid #333;color:#666}
-.content{max-width:840px;margin:0 auto;padding:40px 16px}
-.hero{text-align:center;margin-bottom:48px}
-.hero h1{font-size:clamp(28px,7vw,52px);font-weight:900;margin-bottom:14px;
-  line-height:1.05;letter-spacing:-.02em;color:#e8e8e8}
-.hero p{color:#666;font-size:16px;max-width:500px;margin:0 auto;line-height:1.6}
-.card{background:#111;border:1px solid #1e1e1e;border-radius:20px;padding:26px;margin-bottom:16px}
-.section-lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
-.wallet-addr{font-family:monospace;font-size:clamp(11px,2vw,14px);color:#F7931A;background:#0c0800;
-  padding:12px 16px;border-radius:10px;border:1px solid #2a1700;word-break:break-all;
-  letter-spacing:.04em;line-height:1.6;cursor:pointer;transition:border-color .2s;user-select:all}
-.divider{display:flex;align-items:center;gap:12px;margin:18px 0}
-.divider-line{flex:1;height:1px;background:#1e1e1e}
-.divider-txt{font-family:monospace;font-size:13px;color:#555;white-space:nowrap}
-.phrase-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-.word-pill{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:8px;padding:9px 8px;
-  font-family:monospace;font-size:13px;color:#888;display:flex;align-items:center;gap:5px;
-  overflow:hidden;transition:background .08s,border-color .08s,color .08s}
-.word-num{color:#2a2a2a;font-size:10px;min-width:16px;text-align:right;flex-shrink:0}
-.word-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.derived-addr{font-family:monospace;font-size:clamp(10px,1.8vw,13px);color:#252525;
-  background:#0a0a0a;padding:10px 14px;border-radius:8px;border:1px solid #191919;
-  word-break:break-all;letter-spacing:.03em}
-.no-match{text-align:center;padding:14px;background:#0c0c0c;border-radius:10px;
-  border:1px solid #191919;transition:all .08s}
-.no-match-txt{font-weight:900;font-size:18px;color:#222;letter-spacing:.2em;transition:color .08s}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.stat-card{background:#111;border:1px solid #1e1e1e;border-radius:14px;padding:18px 12px;text-align:center}
-.stat-lbl{font-size:11px;letter-spacing:.1em;color:#444;text-transform:uppercase;font-weight:700;margin-bottom:6px}
-.stat-val{font-family:monospace;font-size:clamp(14px,3vw,22px);font-weight:900;color:#F7931A;line-height:1}
-.stat-sub{font-size:11px;color:#333;margin-top:6px}
-.bignum{font-family:monospace;font-size:clamp(10px,2vw,13px);color:#F7931A;word-break:break-all;line-height:1.7}
-.bar-wrap{position:relative;background:#0a0a0a;border-radius:6px;height:22px;
-  border:1px solid #1a1a1a;overflow:hidden}
-.bar-fill{width:1px;height:100%;background:#3a1500}
-.bar-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:11px;color:#222;font-family:monospace;letter-spacing:.05em}
-.comps-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.comp-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px}
-.comp-emoji{font-size:24px;margin-bottom:8px}
-.comp-title{font-size:13px;font-weight:700;color:#c0c0c0;margin-bottom:4px}
-.comp-val{font-family:monospace;font-size:14px;color:#F7931A;margin-bottom:6px}
-.comp-note{font-size:12px;color:#3a3a3a;line-height:1.4}
-.punchline{padding:18px 20px;background:#080e06;border:1px solid #162010;border-radius:12px;
-  font-size:14px;line-height:1.7;color:#6a9a50;margin-top:20px}
-.lb-header{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:20px;flex-wrap:wrap;gap:10px}
-.lb-title{font-size:22px;font-weight:900;color:#e8e8e8}
-.submit-btn{background:#F7931A;border:none;color:#000;border-radius:10px;padding:8px 18px;
-  cursor:pointer;font-weight:800;font-size:13px;font-family:inherit}
-.form-box{background:#0d0d0d;border:1px solid #222;border-radius:12px;
-  padding:16px 18px;margin-bottom:18px;display:none}
-.form-row{display:flex;gap:8px;margin-top:10px}
-.name-input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:8px;
-  padding:10px 14px;color:#e8e8e8;font-size:14px;outline:none;font-family:inherit}
-.name-input:focus{border-color:#555}
-.form-submit{background:#F7931A;color:#000;border:none;border-radius:8px;
-  padding:10px 20px;font-weight:800;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap}
-.cancel-btn{background:transparent;border:1px solid #2a2a2a;color:#666;border-radius:8px;
-  padding:10px 14px;cursor:pointer;font-family:inherit;font-size:14px}
-.lb-empty{text-align:center;padding:40px 20px}
-.lb-empty-icon{font-size:44px;margin-bottom:12px}
-.lb-row{display:flex;align-items:center;gap:14px;background:#0d0d0d;border:1px solid #1a1a1a;
-  border-radius:12px;padding:12px 18px;margin-bottom:8px}
-.lb-rank{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
-.lb-name{flex:1;font-weight:600;font-size:15px;color:#e8e8e8}
-.lb-count{font-family:monospace;color:#F7931A;font-size:15px;font-weight:700}
-.lb-unit{font-size:12px;color:#444;margin-left:4px}
-.turbo-overlay{background:#0c0900;border:1px solid #2a1900;border-radius:14px;
-  padding:32px 24px;text-align:center;margin-bottom:18px;display:none}
-.ok-badge{font-size:13px;color:#5a9;display:none}
-.inset-box{background:#090909;border-radius:12px;padding:14px 18px;margin-bottom:22px;border:1px solid #1a1a1a}
-.h2{font-size:22px;font-weight:900;color:#e8e8e8;margin-bottom:6px}
-.muted{color:#666;font-size:14px;margin-bottom:22px;line-height:1.5}
-.footer{text-align:center;color:#2a2a2a;font-size:12px;padding-top:32px;line-height:1.8}
-@media(max-width:500px){
-  .phrase-grid{grid-template-columns:repeat(3,1fr)}
-  .stats-grid{grid-template-columns:1fr 1fr}
-  .stats-grid .stat-card:last-child{grid-column:1/-1}
-  .comps-grid{grid-template-columns:1fr}
+body{
+    font-family:Arial,sans-serif;
+    margin:20px;
+}
+
+canvas{
+    border:1px solid black;
+    cursor:crosshair;
+    image-rendering:pixelated;
+}
+
+button{
+    margin:5px;
+    padding:8px 12px;
+}
+
+textarea{
+    width:100%;
+    height:300px;
+    margin-top:10px;
+    font-family:monospace;
+    font-size:12px;
+}
+
+hr{
+    margin:30px 0;
+    border:none;
+    border-top:1px solid #ccc;
+}
+
+.candidate{
+    display:inline-block;
+    margin:6px;
+    padding:6px;
+    text-align:center;
+    border:1px solid #ccc;
+    border-radius:4px;
+    vertical-align:top;
+    font-size:11px;
+    background:#fafafa;
+}
+
+.candidate canvas{
+    border:1px solid #999;
+    image-rendering:pixelated;
+    cursor:default;
+}
+
+.candidate.checked{
+    background:#eaffea;
+    border-color:#4a4;
+}
+
+#stats{
+    font-family:monospace;
+    margin:10px 0;
+    padding:8px;
+    background:#f4f4f4;
+    border-left:3px solid #666;
+}
+
+.section-note{
+    color:#555;
+    max-width:800px;
 }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════
-     Change WALLET to your Bitcoin address
-     ════════════════════════════════════════════ -->
+<h2>20x4 LCD Designer</h2>
 
-<div class="hdr">
-  <span class="hdr-title">₿ BITCOIN KEYSPACE CHALLENGE</span>
-  <div class="hdr-right">
-    <span class="ok-badge" id="ok-badge">✓ Submitted!</span>
-    <button class="turbo-btn" id="turbo-btn" onclick="toggleTurbo()">⚡ TURBO</button>
-  </div>
-</div>
+<p>
+Click and drag to draw pixels.
+Each LCD character is 5&times;8 pixels.
+The display is 20&times;4 characters (100&times;32 pixels total).
+</p>
 
-<div class="content">
-  <div class="hero">
-    <h1>Can the Internet Guess<br><span style="color:#F7931A">My Bitcoin Wallet?</span></h1>
-    <p>Every attempt generates a genuine random 12-word seed phrase and checks if it unlocks the wallet below. It never will.</p>
-  </div>
+<canvas id="lcd" width="1000" height="320"></canvas>
 
-  <div class="card">
-    <div class="section-lbl" style="color:#444">🔑 Target Wallet</div>
-    <div class="wallet-addr" id="wallet-addr" onclick="copyAddr()" title="Click to copy">
-      <!-- address inserted by JS -->
-      <span id="copy-hint" style="margin-left:10px;font-size:11px;color:#444;transition:color .2s">⌘C</span>
-    </div>
+<br>
 
-    <div class="divider">
-      <div class="divider-line"></div>
-      <span class="divider-txt" id="attempt-counter">Attempt #0</span>
-      <div class="divider-line"></div>
-    </div>
+<button onclick="generate()">Generate Raw Bitmap Dump (all 80 cells)</button>
+<button onclick="clearScreen()">Clear</button>
 
-    <div class="turbo-overlay" id="turbo-overlay">
-      <div style="font-size:38px;margin-bottom:10px">⚡</div>
-      <div style="color:#F7931A;font-weight:900;font-size:20px;margin-bottom:8px">TURBO MODE ACTIVE</div>
-      <div style="color:#666;font-size:14px">Display paused — counting at maximum speed</div>
-      <div style="font-family:monospace;color:#444;font-size:12px;margin-top:10px">≈ 5,000,000 guesses / second</div>
-    </div>
+<textarea id="output"></textarea>
 
-    <div class="phrase-grid" id="phrase-grid"></div>
+<hr>
 
-    <div style="margin-bottom:16px">
-      <div class="section-lbl" style="color:#252525">→ Derived Address</div>
-      <div class="derived-addr" id="derived-addr">Computing...</div>
-    </div>
+<h2>Convert Full Canvas to LCD-Safe Text</h2>
 
-    <div class="no-match" id="no-match-badge">
-      <span class="no-match-txt" id="no-match-txt">✗ &nbsp; NO MATCH</span>
-    </div>
-  </div>
+<p class="section-note">
+A real HD44780-style LCD can only show its built-in font plus up to
+<strong>8 custom characters</strong> (CGRAM slots 0&ndash;7). This tool matches every
+5&times;8 cell of your drawing against the closest built-in character, finds the
+shapes that don't look like any letter/number/symbol, and figures out which
+8 of those shapes are worth "spending" a custom-character slot on &mdash;
+ranked by how much total visual error they fix across the whole screen.
+You can override the picks below before generating code.
+</p>
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-lbl">Your Session</div>
-      <div class="stat-val" id="stat-session">0</div>
-      <div class="stat-sub">guesses</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-lbl">Global Total</div>
-      <div class="stat-val" id="stat-global">0</div>
-      <div class="stat-sub">all visitors</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-lbl">Speed</div>
-      <div class="stat-val" id="stat-speed">~1,000</div>
-      <div class="stat-sub">guesses / sec</div>
-    </div>
-  </div>
+<button onclick="analyzeArt()">Analyze Drawing &amp; Suggest Custom Characters</button>
 
-  <div class="card">
-    <div class="h2">Why It'll <span style="color:#F7931A">Never Work</span></div>
-    <div class="muted">A 12-word Bitcoin seed phrase has 2¹²⁸ possible combinations — a number that dwarfs human comprehension.</div>
+<div id="candidateList"></div>
 
-    <div class="inset-box">
-      <div class="section-lbl" style="color:#444">Total possible seed phrases — 2¹²⁸</div>
-      <div class="bignum">340,282,366,920,938,463,463,374,607,431,768,211,456</div>
-    </div>
+<div id="stats"></div>
 
-    <div style="margin-bottom:24px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-        <div class="section-lbl" style="color:#444">Keyspace Searched</div>
-        <div style="font-family:monospace;font-size:11px;color:#252525;max-width:60%;
-          text-align:right;word-break:break-all" id="perc-txt">0.000000000000000000000000000000000000000%</div>
-      </div>
-      <div class="bar-wrap">
-        <div class="bar-fill"></div>
-        <div class="bar-lbl">← YOU ARE HERE · THE BEGINNING · OF NOTHING</div>
-      </div>
-      <div style="font-size:11px;color:#222;margin-top:6px;text-align:center">
-        Every guess ever made in all of history wouldn't move this bar by a single pixel.
-      </div>
-    </div>
+<p class="section-note">Preview &mdash; this is what would actually appear on the LCD with the current selection:</p>
+<canvas id="preview" width="1000" height="320"></canvas>
 
-    <div style="font-size:15px;font-weight:700;color:#555;margin-bottom:12px">Scale Comparisons</div>
-    <div class="comps-grid">
-      <div class="comp-card">
-        <div class="comp-emoji">🏖️</div>
-        <div class="comp-title">Grains of sand on Earth</div>
-        <div class="comp-val">7.5 × 10¹⁸</div>
-        <div class="comp-note">20 orders of magnitude fewer than 2¹²⁸</div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-emoji">⭐</div>
-        <div class="comp-title">Stars in observable universe</div>
-        <div class="comp-val">~10²⁴</div>
-        <div class="comp-note">14 orders of magnitude fewer than 2¹²⁸</div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-emoji">⏱️</div>
-        <div class="comp-title">Seconds since the Big Bang</div>
-        <div class="comp-val">4.3 × 10¹⁷</div>
-        <div class="comp-note">21 orders of magnitude fewer than 2¹²⁸</div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-emoji">⚛️</div>
-        <div class="comp-title">Atoms in the observable universe</div>
-        <div class="comp-val">~10⁸⁰</div>
-        <div class="comp-note">Comparable in scale to 2²⁵⁶ (24-word phrases)</div>
-      </div>
-    </div>
+<br>
 
-    <div class="punchline">
-      💡 <strong style="color:#7cb85e">The real lesson:</strong> Bitcoin isn't protected by a hard password.
-      It's protected by mathematics. If every atom in the universe were a supercomputer checking
-      a trillion keys per second since the Big Bang — they'd have searched a fraction too small to write on this page.
-    </div>
-  </div>
+<button onclick="generateTextCode()">Generate Arduino Code (Text Mode)</button>
+<button onclick="downloadMicropythonFile()">Download .lcd File (MicroPython)</button>
 
-  <div class="card">
-    <div class="lb-header">
-      <div class="lb-title">🏆 Top <span style="color:#F7931A">Guessers</span></div>
-      <button class="submit-btn" id="submit-score-btn" onclick="toggleForm()">+ Submit My Score</button>
-    </div>
-
-    <div class="form-box" id="form-box">
-      <div style="font-size:13px;color:#666">
-        Add your <strong id="form-count" style="color:#bbb">0</strong> guesses to the global leaderboard:
-      </div>
-      <div class="form-row">
-        <input class="name-input" id="name-input" placeholder="Your name..."
-          onkeydown="if(event.key==='Enter')submitScore()" />
-        <button class="form-submit" onclick="submitScore()">Submit</button>
-        <button class="cancel-btn" onclick="toggleForm()">✕</button>
-      </div>
-      <div style="font-size:11px;color:#333;margin-top:8px">Scores are publicly visible to all visitors.</div>
-    </div>
-
-    <div class="lb-empty" id="lb-empty">
-      <div class="lb-empty-icon">🔑</div>
-      <div style="color:#444;font-size:15px;margin-bottom:4px">No entries yet.</div>
-      <div style="color:#2a2a2a;font-size:13px">Be the first to submit your score!</div>
-    </div>
-    <div id="lb-list"></div>
-  </div>
-
-  <div class="footer">
-    All seed phrases are generated locally in your browser using cryptographically secure random numbers.<br>
-    Nothing is ever sent to a server. This is a purely educational demonstration.
-  </div>
-</div>
+<textarea id="textOutput" placeholder="Arduino code appears here..."></textarea>
+<textarea id="micropythonOutput" placeholder=".lcd file content appears here (also downloads automatically)..."></textarea>
 
 <script>
-// ════════════════════════════════════════════
-// CHANGE THIS to your Bitcoin address
-// ════════════════════════════════════════════
-const WALLET = "1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf8Na";
 
-const O = "#F7931A";
-const WORDS = "abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby balance bamboo banana banner barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone book boost border boring borrow boss bottom bounce box brain brand brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble budget buffalo build bulb bulk bullet bundle burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp canal cancel candy cannon canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chief child chimney choice choose chronic chunk circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crazy cream credit creek crew cricket crime crisp critic cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark emerge emotion employ empty enable enact endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip erase erosion error erupt escape essay estate eternal ethics evidence evil evolve exact example excess exchange excite exclude exercise exhaust exhibit exile exist exit exotic expand expire explain expose express extend extra eye fable face faculty faint faith fall false fame family famous fan fancy fantasy far fashion fat fatal father fatigue fault favorite feature february federal fee feed feel feet field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guide guilt guitar gun gym habit hair half hammer hamster hand happy harsh harvest have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon ignore ill illegal image imitate immense immune impact impose improve impulse inbox income index indicate indoor industry infant inflict inform inhale inject inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab lamp language laptop large later laugh laundry lava law lawn lawsuit layer lazy leader learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury mad magic magnet maid main mammal mango mansion manual maple marble march margin marine market marriage mask master match material math matrix matter maximum maze meadow mean medal media melody melt member memory mention mentor menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle miss mitten model modify mom monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery naive name napkin narrow nasty nature near neck need negative neglect neither nephew nerve nest network news next nice night noble noise nominee noodle normal north notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure obtain ocean october odor off offer office often oil okay old olive olympic omit once onion open opera oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outside oval over own oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patrol pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp punch pupil puppy purchase purity purpose push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rage rail rain raise rally ramp ranch random range rapid rare rate rather raven reach ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save scale scan scatter scene scheme scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense series service session settle setup seven shadow shaft shallow share shed shell sheriff shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skill skin skirt skull slam sleep slender slice slide slight slim slogan slot slow slush smart smile smoke smooth snack snake snap sniff snow soap soccer social sock solar soldier solid solution solve someone song soon sorry soul sound soup source south space spare spatial spawn speak special speed sphere spice spider spike spin spirit split spoil sponsor spoon spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stop store storm story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such suddenly suffer suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise sustain swallow swamp swap swear sweet swift swim swing switch sword symbol symptom syrup table tackle tag tail talent tank tape target task tattoo teach team tell ten tenant tennis tent term test text thank that theme theory there they thing this thought three thrive throw thumb thunder ticket tilt timber time tiny tip tired title toast tobacco today together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome well west wet whale wheat wheel where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo".split(" ");
+const PIXEL_SIZE = 10;
 
-let session = 0, global = 0, turbo = false;
-let phrase = randPhrase();
-let lastSync = 0, lsSyncCount = 0;
-let leaderboard = [];
-let showForm = false;
-let lastRaf = 0;
-let fbReady = false;
+const LCD_COLS = 20;
+const LCD_ROWS = 4;
 
-// Set the wallet address in the DOM (keeps the copy-hint span intact)
-(function() {
-  const el = document.getElementById("wallet-addr");
-  const hint = document.getElementById("copy-hint");
-  el.insertBefore(document.createTextNode(WALLET + " "), hint);
-})();
+const CHAR_W = 5;
+const CHAR_H = 8;
 
-// Wait for Firebase module to finish loading
-window.addEventListener("firebaseReady", async () => {
-  fbReady = true;
-  await loadData();
+const WIDTH = LCD_COLS * CHAR_W;
+const HEIGHT = LCD_ROWS * CHAR_H;
+
+const canvas = document.getElementById("lcd");
+const ctx = canvas.getContext("2d");
+
+const previewCanvas = document.getElementById("preview");
+const pctx = previewCanvas.getContext("2d");
+
+let pixels = [];
+
+for(let y=0;y<HEIGHT;y++){
+    pixels[y]=[];
+    for(let x=0;x<WIDTH;x++){
+        pixels[y][x]=0;
+    }
+}
+
+function draw(){
+
+    ctx.fillStyle="white";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    for(let y=0;y<HEIGHT;y++){
+        for(let x=0;x<WIDTH;x++){
+
+            ctx.fillStyle=pixels[y][x] ? "black":"#ddd";
+
+            ctx.fillRect(
+                x*PIXEL_SIZE,
+                y*PIXEL_SIZE,
+                PIXEL_SIZE-1,
+                PIXEL_SIZE-1
+            );
+        }
+    }
+
+    if(hoverCharX >= 0 && hoverCharY >= 0){
+        ctx.strokeStyle = "rgba(0, 0, 255, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+            hoverCharX * CHAR_W * PIXEL_SIZE + 1,
+            hoverCharY * CHAR_H * PIXEL_SIZE + 1,
+            CHAR_W * PIXEL_SIZE - 2,
+            CHAR_H * PIXEL_SIZE - 2
+        );
+        ctx.lineWidth = 1;
+    }
+
+    drawGridLines(ctx, canvas);
+}
+
+function drawGridLines(targetCtx, targetCanvas){
+    targetCtx.strokeStyle="red";
+
+    for(let c=0;c<=LCD_COLS;c++){
+        targetCtx.beginPath();
+        targetCtx.moveTo(c*CHAR_W*PIXEL_SIZE,0);
+        targetCtx.lineTo(c*CHAR_W*PIXEL_SIZE,targetCanvas.height);
+        targetCtx.stroke();
+    }
+
+    for(let r=0;r<=LCD_ROWS;r++){
+        targetCtx.beginPath();
+        targetCtx.moveTo(0,r*CHAR_H*PIXEL_SIZE);
+        targetCtx.lineTo(targetCanvas.width,r*CHAR_H*PIXEL_SIZE);
+        targetCtx.stroke();
+    }
+}
+
+let mouseDown = false;
+let currentButton = 0;
+let hoverCharX = -1;
+let hoverCharY = -1;
+
+// Disable browser context menu
+canvas.addEventListener("contextmenu", e => {
+    e.preventDefault();
 });
-// If firebase was ready before this listener attached, handle it now
-if (window.firebaseReady) { fbReady = true; loadData().catch(()=>{}); }
-// Fallback if Firebase fails to load (still show the counter locally)
-setTimeout(() => { if (!fbReady) { fbReady = true; } }, 5000);
 
-function randPhrase() {
-  const wordList = (typeof WORDS === "string") ? WORDS.split(/\s+/) : WORDS;
-  const a = new Uint16Array(12);
-  crypto.getRandomValues(a);
-  return Array.from(a, v => wordList[v % wordList.length]);
-}
+canvas.addEventListener("mousedown", e => {
+    e.preventDefault();
 
-function deriveAddr(ws) {
-  const s = ws.join("|");
-  let h = 5381, g = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    h = (((h << 5) + h) ^ c) >>> 0;
-    g = ((g ^ c) * 0x01000193) >>> 0;
-  }
-  const B = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let addr = "1", n = h;
-  for (let i = 0; i < 16; i++) { addr += B[n % 58]; n = (n * 1664525 + 1013904223) >>> 0; }
-  n = g;
-  for (let i = 0; i < 9; i++) { addr += B[n % 58]; n = (n * 6364136223) >>> 0; }
-  return addr;
-}
+    mouseDown = true;
+    currentButton = e.button;
 
-function fmtN(n) { return Math.round(n).toLocaleString("en-US"); }
+    paint(e);
+});
 
-function percStr(s) {
-  if (s < 1) return "0." + "0".repeat(37) + "1%";
-  const l = Math.log10(s) - 36.532;
-  if (l >= 0) return ">100%";
-  const z = Math.ceil(-l) - 1;
-  const sig = Math.round(Math.pow(10, l + z + 1) * 100).toString().padStart(3, "0");
-  return "0." + "0".repeat(Math.min(z, 32)) + sig + "%";
-}
-
-function renderPhrase(flash) {
-  const grid = document.getElementById("phrase-grid");
-  if (!grid) return;
-  grid.innerHTML = phrase.map((w, i) => `
-    <div class="word-pill" style="${flash ? "background:#110900;border-color:#3d1a00;color:#c56200" : ""}">
-      <span class="word-num">${i + 1}.</span>
-      <span class="word-txt">${w}</span>
-    </div>`).join("");
-}
-
-function updateDisplay() {
-  document.getElementById("attempt-counter").textContent = "Attempt #" + fmtN(session);
-  document.getElementById("stat-session").textContent    = fmtN(session);
-  document.getElementById("stat-global").textContent     = fmtN(global);
-  document.getElementById("perc-txt").textContent        = percStr(session);
-  const fc = document.getElementById("form-count");
-  if (fc) fc.textContent = fmtN(session);
-}
-
-function tick(ts) {
-  if (!turbo) {
-    if (ts - lastRaf > 150) {
-      lastRaf = ts;
-      phrase = randPhrase();
-      renderPhrase(true);
-      document.getElementById("derived-addr").textContent = deriveAddr(phrase);
-      const nm  = document.getElementById("no-match-badge");
-      const nmt = document.getElementById("no-match-txt");
-      nm.style.background   = "#130000";
-      nm.style.borderColor  = "#3d0000";
-      nmt.style.color       = "#c00";
-      session += 150; global += 150;
-      setTimeout(() => {
-        nm.style.background  = "#0c0c0c";
-        nm.style.borderColor = "#191919";
-        nmt.style.color      = "#222";
-        renderPhrase(false);
-      }, 90);
-      updateDisplay();
+canvas.addEventListener("mousemove", e => {
+    updateHoverCell(e);
+    if(mouseDown){
+        paint(e);
     }
-  } else {
-    if (ts - lastRaf > 10) {
-      lastRaf = ts;
-      session += 50000; global += 50000;
+});
+
+canvas.addEventListener("mouseleave", () => {
+    hoverCharX = -1;
+    hoverCharY = -1;
+    draw();
+});
+
+window.addEventListener("mouseup", () => {
+    mouseDown = false;
+});
+
+window.addEventListener("keydown", e => {
+    if(!canvas.contains(document.activeElement) && document.activeElement !== document.body) return;
+    if(hoverCharX < 0 || hoverCharY < 0) return;
+    if(e.ctrlKey || e.altKey || e.metaKey) return;
+    if(e.key.length !== 1) return;
+    if(!STANDARD_FONT[e.key]) return;
+
+    e.preventDefault();
+    typeAsciiCharacterAtHover(e.key);
+});
+
+function updateHoverCell(e){
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+
+    if(x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT){
+        hoverCharX = -1;
+        hoverCharY = -1;
+        draw();
+        return;
     }
-    updateDisplay();
-  }
-  syncToFirebase(ts);
-  requestAnimationFrame(tick);
+
+    const charX = Math.floor(x / CHAR_W);
+    const charY = Math.floor(y / CHAR_H);
+
+    if(charX !== hoverCharX || charY !== hoverCharY){
+        hoverCharX = charX;
+        hoverCharY = charY;
+        draw();
+    }
 }
 
-async function syncToFirebase(ts) {
-  if (!fbReady) return;
-  if (ts - lastSync < 15000) return;   // sync every 15 seconds
-  lastSync = ts;
-  try {
-    const delta    = session - lsSyncCount;
-    lsSyncCount    = session;
-    const newTotal = await window.syncGlobalCount(delta);
-    if (newTotal !== null) global = newTotal;
-  } catch {}
+function typeAsciiCharacterAtHover(ch){
+    const pattern = STANDARD_FONT[ch];
+    for(let py = 0; py < CHAR_H; py++){
+        for(let px = 0; px < CHAR_W; px++){
+            const bit = (pattern[py] >> (CHAR_W - 1 - px)) & 1;
+            pixels[hoverCharY * CHAR_H + py][hoverCharX * CHAR_W + px] = bit;
+        }
+    }
+    draw();
 }
 
-async function loadData() {
-  try {
-    global = await window.loadGlobalCount();
-    updateDisplay();
-  } catch {}
-  try {
-    const rows = await window.loadLeaderboard();
-    leaderboard = rows.map(r => ({ n: r.name, c: r.count }));
-    renderLB();
-  } catch {}
+function paint(e){
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+
+    if(x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT)
+        return;
+
+    const charX = Math.floor(x / CHAR_W);
+    const charY = Math.floor(y / CHAR_H);
+
+    // CTRL + Right Click = Fill whole 5x8 character block
+    if(e.ctrlKey && currentButton === 2){
+
+        for(let py=0; py<CHAR_H; py++){
+            for(let px=0; px<CHAR_W; px++){
+
+                pixels[
+                    charY * CHAR_H + py
+                ][
+                    charX * CHAR_W + px
+                ] = 1;
+            }
+        }
+    }
+
+    // SHIFT + Right Click = Clear whole 5x8 character block
+    else if(e.shiftKey && currentButton === 2){
+
+        for(let py=0; py<CHAR_H; py++){
+            for(let px=0; px<CHAR_W; px++){
+
+                pixels[
+                    charY * CHAR_H + py
+                ][
+                    charX * CHAR_W + px
+                ] = 0;
+            }
+        }
+    }
+
+    // Right Click = Erase single pixel
+    else if(currentButton === 2){
+
+        pixels[y][x] = 0;
+    }
+
+    // Left Click = Draw single pixel
+    else{
+
+        pixels[y][x] = 1;
+    }
+
+    draw();
+}
+function clearScreen() {
+    for(let y=0; y<HEIGHT; y++){
+        for(let x=0; x<WIDTH; x++){
+            pixels[y][x] = 0;
+        }
+    }
+    draw();
 }
 
-function renderLB() {
-  const empty   = document.getElementById("lb-empty");
-  const list    = document.getElementById("lb-list");
-  const medals  = [O, "#888", "#9b6b2f"];
-  if (leaderboard.length === 0) { empty.style.display = "block"; list.innerHTML = ""; return; }
-  empty.style.display = "none";
-  list.innerHTML = leaderboard.map((e, i) => `
-    <div class="lb-row" style="${i === 0 ? "border-color:#2e1800" : ""}">
-      <div class="lb-rank" style="background:${medals[i] || "#1e1e1e"};color:${i < 3 ? "#000" : "#555"}">${i + 1}</div>
-      <div class="lb-name">${e.n}</div>
-      <div class="lb-count">${fmtN(e.c)}</div>
-      <span class="lb-unit">guesses</span>
-    </div>`).join("");
+function generate() {
+
+    let output = "// Arduino LCD data\n\n";
+
+    for(let charY=0; charY<LCD_ROWS; charY++) {
+
+        for(let charX=0; charX<LCD_COLS; charX++) {
+
+            output += `// Character (${charX},${charY})\n`;
+
+            for(let row=0; row<CHAR_H; row++) {
+
+                let value = 0;
+
+                for(let col=0; col<CHAR_W; col++) {
+
+                    const px = charX * CHAR_W + col;
+                    const py = charY * CHAR_H + row;
+
+                    if(pixels[py][px]) {
+                        value |= (1 << (4 - col));
+                    }
+                }
+
+                output += "B" + value.toString(2).padStart(5,'0') + "\n";
+            }
+
+            output += "\n";
+        }
+    }
+
+    document.getElementById("output").value = output;
 }
 
-function toggleTurbo() {
-  turbo = !turbo;
-  const btn     = document.getElementById("turbo-btn");
-  const overlay = document.getElementById("turbo-overlay");
-  const grid    = document.getElementById("phrase-grid");
-  btn.style.background = turbo ? O : "transparent";
-  btn.style.border     = turbo ? `1px solid ${O}` : "1px solid #333";
-  btn.style.color      = turbo ? "#000" : "#666";
-  btn.textContent      = turbo ? "⚡ TURBO ON" : "⚡ TURBO";
-  overlay.style.display = turbo ? "block" : "none";
-  grid.style.display    = turbo ? "none"  : "grid";
-  document.getElementById("stat-speed").textContent = turbo ? "~5,000,000" : "~1,000";
+draw();
+
+/* =====================================================================
+   ART -> LCD-SAFE TEXT CONVERSION
+   ---------------------------------------------------------------------
+   Strategy:
+   1. For every 5x8 character cell, find the closest-matching built-in
+      HD44780-style character (by Hamming/pixel distance).
+   2. Collect every distinct cell pattern that doesn't match well (dist>0).
+   3. Greedily pick up to 8 of those patterns as custom-character slots,
+      each time picking whichever pattern reduces TOTAL remaining error
+      (across all 80 cells, not just exact-duplicate cells) the most.
+      This is the standard greedy approximation for this kind of
+      facility-location / k-medoid problem and is fast and effective for
+      a small fixed grid like a 20x4 display.
+   4. The candidate list is shown to the user as a checkbox picker
+      (pre-checked with the algorithm's top picks) so they can swap any
+      slot for a different shape and immediately see the effect.
+   ===================================================================== */
+
+// Standard 5x8 dot-matrix font approximating the HD44780 built-in character
+// generator ROM for printable ASCII 0x20-0x7E. Each glyph is 8 rows of 5
+// bits (leftmost pixel = MSB). This is a best-effort approximation of the
+// standard font -- if your specific display needs pixel-perfect matching,
+// compare against your datasheet's "Character Generator ROM Pattern" table
+// and tweak entries here.
+const STANDARD_FONT_RAW = {
+' ':["00000","00000","00000","00000","00000","00000","00000","00000"],
+'!':["00100","00100","00100","00100","00100","00000","00100","00000"],
+'"':["01010","01010","01010","00000","00000","00000","00000","00000"],
+'#':["01010","01010","11111","01010","11111","01010","01010","00000"],
+'$':["00100","01111","10100","01110","00101","11110","00100","00000"],
+'%':["11001","11010","00100","01000","10110","10011","00000","00000"],
+'&':["01100","10010","10100","01000","10101","10010","01101","00000"],
+"'":["00100","00100","01000","00000","00000","00000","00000","00000"],
+'(':["00010","00100","01000","01000","01000","00100","00010","00000"],
+')':["01000","00100","00010","00010","00010","00100","01000","00000"],
+'*':["00000","00100","10101","01110","10101","00100","00000","00000"],
+'+':["00000","00100","00100","11111","00100","00100","00000","00000"],
+',':["00000","00000","00000","00000","00100","00100","01000","00000"],
+'-':["00000","00000","00000","11111","00000","00000","00000","00000"],
+'.':["00000","00000","00000","00000","00000","01100","01100","00000"],
+'/':["00001","00010","00010","00100","01000","01000","10000","00000"],
+'0':["01110","10001","10011","10101","11001","10001","01110","00000"],
+'1':["00100","01100","00100","00100","00100","00100","01110","00000"],
+'2':["01110","10001","00001","00010","00100","01000","11111","00000"],
+'3':["11111","00010","00100","00010","00001","10001","01110","00000"],
+'4':["00010","00110","01010","10010","11111","00010","00010","00000"],
+'5':["11111","10000","11110","00001","00001","10001","01110","00000"],
+'6':["00110","01000","10000","11110","10001","10001","01110","00000"],
+'7':["11111","00001","00010","00100","01000","01000","01000","00000"],
+'8':["01110","10001","10001","01110","10001","10001","01110","00000"],
+'9':["01110","10001","10001","01111","00001","00010","01100","00000"],
+':':["00000","01100","01100","00000","01100","01100","00000","00000"],
+';':["00000","01100","01100","00000","01100","00100","01000","00000"],
+'<':["00010","00100","01000","10000","01000","00100","00010","00000"],
+'=':["00000","00000","11111","00000","11111","00000","00000","00000"],
+'>':["01000","00100","00010","00001","00010","00100","01000","00000"],
+'?':["01110","10001","00010","00100","00100","00000","00100","00000"],
+'@':["01110","10001","10111","10101","10111","10000","01111","00000"],
+'A':["01110","10001","10001","11111","10001","10001","10001","00000"],
+'B':["11110","10001","10001","11110","10001","10001","11110","00000"],
+'C':["01111","10000","10000","10000","10000","10000","01111","00000"],
+'D':["11110","10001","10001","10001","10001","10001","11110","00000"],
+'E':["11111","10000","10000","11110","10000","10000","11111","00000"],
+'F':["11111","10000","10000","11110","10000","10000","10000","00000"],
+'G':["01111","10000","10000","10011","10001","10001","01111","00000"],
+'H':["10001","10001","10001","11111","10001","10001","10001","00000"],
+'I':["01110","00100","00100","00100","00100","00100","01110","00000"],
+'J':["00111","00010","00010","00010","00010","10010","01100","00000"],
+'K':["10001","10010","10100","11000","10100","10010","10001","00000"],
+'L':["10000","10000","10000","10000","10000","10000","11111","00000"],
+'M':["10001","11011","10101","10101","10001","10001","10001","00000"],
+'N':["10001","11001","10101","10101","10011","10001","10001","00000"],
+'O':["01110","10001","10001","10001","10001","10001","01110","00000"],
+'P':["11110","10001","10001","11110","10000","10000","10000","00000"],
+'Q':["01110","10001","10001","10001","10101","10010","01101","00000"],
+'R':["11110","10001","10001","11110","10100","10010","10001","00000"],
+'S':["01111","10000","10000","01110","00001","00001","11110","00000"],
+'T':["11111","00100","00100","00100","00100","00100","00100","00000"],
+'U':["10001","10001","10001","10001","10001","10001","01110","00000"],
+'V':["10001","10001","10001","10001","10001","01010","00100","00000"],
+'W':["10001","10001","10001","10101","10101","11011","10001","00000"],
+'X':["10001","10001","01010","00100","01010","10001","10001","00000"],
+'Y':["10001","10001","01010","00100","00100","00100","00100","00000"],
+'Z':["11111","00001","00010","00100","01000","10000","11111","00000"],
+'[':["01110","01000","01000","01000","01000","01000","01110","00000"],
+'\\':["10000","01000","01000","00100","00010","00010","00001","00000"],
+']':["01110","00010","00010","00010","00010","00010","01110","00000"],
+'^':["00100","01010","10001","00000","00000","00000","00000","00000"],
+'_':["00000","00000","00000","00000","00000","00000","11111","00000"],
+'`':["01000","00100","00010","00000","00000","00000","00000","00000"],
+'a':["00000","00000","01110","00001","01111","10001","01111","00000"],
+'b':["10000","10000","10000","11110","10001","10001","11110","00000"],
+'c':["00000","00000","01111","10000","10000","10000","01111","00000"],
+'d':["00001","00001","00001","01111","10001","10001","01111","00000"],
+'e':["00000","00000","01110","10001","11111","10000","01111","00000"],
+'f':["00011","00100","01111","00100","00100","00100","00100","00000"],
+'g':["00000","00000","01111","10001","01111","00001","01110","00000"],
+'h':["10000","10000","10000","11110","10001","10001","10001","00000"],
+'i':["00100","00000","01100","00100","00100","00100","01110","00000"],
+'j':["00010","00000","00110","00010","00010","10010","01100","00000"],
+'k':["10000","10000","10010","10100","11000","10100","10010","00000"],
+'l':["01100","00100","00100","00100","00100","00100","01110","00000"],
+'m':["00000","00000","11010","10101","10101","10101","10001","00000"],
+'n':["00000","00000","11110","10001","10001","10001","10001","00000"],
+'o':["00000","00000","01110","10001","10001","10001","01110","00000"],
+'p':["00000","00000","11110","10001","11110","10000","10000","00000"],
+'q':["00000","00000","01111","10001","01111","00001","00001","00000"],
+'r':["00000","00000","10110","11000","10000","10000","10000","00000"],
+'s':["00000","00000","01111","10000","01110","00001","11110","00000"],
+'t':["00100","00100","11111","00100","00100","00100","00011","00000"],
+'u':["00000","00000","10001","10001","10001","10011","01101","00000"],
+'v':["00000","00000","10001","10001","10001","01010","00100","00000"],
+'w':["00000","00000","10001","10001","10101","10101","01010","00000"],
+'x':["00000","00000","10001","01010","00100","01010","10001","00000"],
+'y':["00000","00000","10001","10001","01111","00001","01110","00000"],
+'z':["00000","00000","11111","00010","00100","01000","11111","00000"],
+'{':["00011","00100","00100","00100","00100","00100","00011","00000"],
+'|':["00100","00100","00100","00100","00100","00100","00100","00000"],
+'}':["11000","00100","00100","00100","00100","00100","11000","00000"],
+'~':["00000","00000","01001","10101","10010","00000","00000","00000"]
+};
+
+const STANDARD_FONT = {};
+for(const ch in STANDARD_FONT_RAW){
+    STANDARD_FONT[ch] = STANDARD_FONT_RAW[ch].map(r => parseInt(r,2));
+}
+const FONT_ENTRIES = Object.entries(STANDARD_FONT);
+
+function getCellPattern(charX, charY){
+    const rows = [];
+    for(let py=0; py<CHAR_H; py++){
+        let val = 0;
+        for(let px=0; px<CHAR_W; px++){
+            if(pixels[charY*CHAR_H+py][charX*CHAR_W+px]) val |= (1 << (CHAR_W-1-px));
+        }
+        rows.push(val);
+    }
+    return rows;
 }
 
-function toggleForm() {
-  showForm = !showForm;
-  const fb  = document.getElementById("form-box");
-  const btn = document.getElementById("submit-score-btn");
-  fb.style.display   = showForm ? "block" : "none";
-  btn.style.background = showForm ? "transparent" : O;
-  btn.style.border     = showForm ? "1px solid #2a2a2a" : "none";
-  btn.style.color      = showForm ? "#666" : "#000";
-  btn.textContent      = showForm ? "✕ Cancel" : "+ Submit My Score";
-  if (showForm) document.getElementById("form-count").textContent = fmtN(session);
+function patternKey(rows){
+    return rows.join(",");
 }
 
-async function submitScore() {
-  const ni   = document.getElementById("name-input");
-  const name = ni.value.trim();
-  if (!name) return;
-
-  // Optimistic UI update first
-  let lb  = [...leaderboard];
-  const idx = lb.findIndex(e => e.n === name);
-  if (idx >= 0) lb[idx].c += session;
-  else lb.push({ n: name, c: session });
-  lb.sort((a, b) => b.c - a.c);
-  leaderboard = lb.slice(0, 15);
-  renderLB();
-
-  // Then persist to Firebase
-  try { await window.submitToLeaderboard(name, session); } catch {}
-
-  // Refresh from Firebase to get accurate merged scores
-  try {
-    const rows  = await window.loadLeaderboard();
-    leaderboard = rows.map(r => ({ n: r.name, c: r.count }));
-    renderLB();
-  } catch {}
-
-  ni.value = "";
-  toggleForm();
-  const ok = document.getElementById("ok-badge");
-  ok.style.display = "inline";
-  setTimeout(() => ok.style.display = "none", 3000);
+function patternDistance(a, b){
+    let d = 0;
+    for(let r=0; r<8; r++){
+        let x = a[r] ^ b[r];
+        while(x){ d += x & 1; x >>= 1; }
+    }
+    return d;
 }
 
-function copyAddr() {
-  navigator.clipboard.writeText(WALLET).then(() => {
-    const hint = document.getElementById("copy-hint");
-    const addr = document.getElementById("wallet-addr");
-    hint.textContent    = "✓ copied";
-    hint.style.color    = O;
-    addr.style.borderColor = O + "55";
-    setTimeout(() => {
-      hint.textContent   = "⌘C";
-      hint.style.color   = "#444";
-      addr.style.borderColor = "#2a1700";
-    }, 2000);
-  }).catch(() => {});
+function bestStandardMatch(pattern){
+    let bestCh = " ", bestD = Infinity;
+    for(const [ch, rows] of FONT_ENTRIES){
+        const d = patternDistance(pattern, rows);
+        if(d < bestD){
+            bestD = d;
+            bestCh = ch;
+            if(d === 0) break;
+        }
+    }
+    return { ch: bestCh, dist: bestD };
 }
 
-// Boot
-renderPhrase(false);
-document.getElementById("derived-addr").textContent = deriveAddr(phrase);
-requestAnimationFrame(tick);
+function computeGain(candidatePattern, currentBest, cells){
+    let gain = 0;
+    for(let i=0; i<cells.length; i++){
+        const d = patternDistance(cells[i].pattern, candidatePattern);
+        if(d < currentBest[i]) gain += (currentBest[i] - d);
+    }
+    return gain;
+}
+
+// Greedily picks up to 8 patterns from `remaining` (mutates it via splice),
+// in order of how much total error each one fixes, accounting for
+// already-picked slots and partial matches to non-identical cells.
+function rankCandidates(remaining, cells){
+    const currentBest = cells.map(c => c.stdDist);
+    const ranking = [];
+
+    for(let pick=0; pick<8 && remaining.length>0; pick++){
+        let bestIdx = -1, bestGain = -1;
+        for(let i=0; i<remaining.length; i++){
+            const gain = computeGain(remaining[i].pattern, currentBest, cells);
+            if(gain > bestGain){ bestGain = gain; bestIdx = i; }
+        }
+        if(bestGain <= 0) break;
+        const chosen = remaining.splice(bestIdx, 1)[0];
+        ranking.push({ pattern: chosen.pattern, count: chosen.count, gain: bestGain });
+        for(let i=0; i<cells.length; i++){
+            const d = patternDistance(cells[i].pattern, chosen.pattern);
+            if(d < currentBest[i]) currentBest[i] = d;
+        }
+    }
+    return ranking;
+}
+
+let cellData = [];        // 80 cells: {x,y,pattern,stdChar,stdDist}
+let assignment = [];      // 80 cells: {type:'std'|'custom', value, dist}
+let candidatePool = [];   // checkbox state: [{pattern,count,gain,checked}, ...]
+let selectedCustom = [];  // currently-checked patterns, in slot order (max 8)
+
+function analyzeArt(){
+    cellData = [];
+    const patternMap = new Map();
+
+    for(let cy=0; cy<LCD_ROWS; cy++){
+        for(let cx=0; cx<LCD_COLS; cx++){
+            const pattern = getCellPattern(cx, cy);
+            const { ch, dist } = bestStandardMatch(pattern);
+            cellData.push({ x:cx, y:cy, pattern, stdChar:ch, stdDist:dist });
+        }
+    }
+
+    cellData.forEach(c => {
+        if(c.stdDist > 0){
+            const key = patternKey(c.pattern);
+            if(!patternMap.has(key)) patternMap.set(key, { pattern:c.pattern, count:0, baseDist:c.stdDist });
+            patternMap.get(key).count++;
+        }
+    });
+
+    const remaining = Array.from(patternMap.values());
+    const ranked = rankCandidates(remaining, cellData); // mutates `remaining`, leaves leftovers in it
+
+    // leftover patterns (not algorithmically chosen) offered as swap-in options,
+    // ranked by a simple frequency x error heuristic
+    const extras = remaining
+        .sort((a,b) => (b.count*b.baseDist) - (a.count*a.baseDist))
+        .slice(0, 8);
+
+    candidatePool = ranked.map(r => ({ pattern:r.pattern, count:r.count, gain:r.gain, checked:true }))
+        .concat(extras.map(e => ({ pattern:e.pattern, count:e.count, gain:0, checked:false })));
+
+    if(candidatePool.length === 0){
+        document.getElementById("candidateList").innerHTML =
+            "<p><em>Every cell already matches a built-in character closely &mdash; no custom characters needed!</em></p>";
+    }
+
+    buildCandidateUI();
+    selectedCustom = candidatePool.filter(c => c.checked).map(c => c.pattern);
+    recompute();
+}
+
+function buildCandidateUI(){
+    const container = document.getElementById("candidateList");
+    container.innerHTML = "";
+
+    candidatePool.forEach((cand, i) => {
+        const box = document.createElement("div");
+        box.className = "candidate" + (cand.checked ? " checked" : "");
+
+        const mini = document.createElement("canvas");
+        mini.width = CHAR_W * 6;
+        mini.height = CHAR_H * 6;
+        const mctx = mini.getContext("2d");
+        mctx.fillStyle = "white";
+        mctx.fillRect(0, 0, mini.width, mini.height);
+        for(let py=0; py<CHAR_H; py++){
+            for(let px=0; px<CHAR_W; px++){
+                const bit = (cand.pattern[py] >> (CHAR_W-1-px)) & 1;
+                mctx.fillStyle = bit ? "black" : "#eee";
+                mctx.fillRect(px*6, py*6, 5, 5);
+            }
+        }
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = cand.checked;
+        cb.addEventListener("change", () => toggleCandidate(i, cb, box));
+
+        const label = document.createElement("div");
+        label.innerHTML = `slot ${i+1}<br>used ${cand.count}&times;<br>fixes ${cand.gain}px`;
+
+        box.appendChild(mini);
+        box.appendChild(document.createElement("br"));
+        box.appendChild(cb);
+        box.appendChild(label);
+        container.appendChild(box);
+    });
+}
+
+function toggleCandidate(i, cb, box){
+    if(cb.checked){
+        const currentlyChecked = candidatePool.filter(c => c.checked).length;
+        if(currentlyChecked >= 8){
+            cb.checked = false;
+            alert("Most HD44780-style displays only support 8 custom characters (CGRAM slots 0-7). Uncheck one first.");
+            return;
+        }
+        candidatePool[i].checked = true;
+        box.classList.add("checked");
+    } else {
+        candidatePool[i].checked = false;
+        box.classList.remove("checked");
+    }
+    selectedCustom = candidatePool.filter(c => c.checked).map(c => c.pattern);
+    recompute();
+}
+
+function recompute(){
+    assignment = cellData.map(c => {
+        let bestType = "std", bestValue = c.stdChar, bestDist = c.stdDist;
+        selectedCustom.forEach((pat, i) => {
+            const d = patternDistance(c.pattern, pat);
+            if(d < bestDist){ bestDist = d; bestType = "custom"; bestValue = i; }
+        });
+        return { type:bestType, value:bestValue, dist:bestDist };
+    });
+
+    renderPreview();
+    updateStats();
+}
+
+function renderPreview(){
+    pctx.fillStyle = "white";
+    pctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+    assignment.forEach((a, i) => {
+        const cx = i % LCD_COLS;
+        const cy = Math.floor(i / LCD_COLS);
+        const rows = a.type === "std" ? STANDARD_FONT[a.value] : selectedCustom[a.value];
+
+        for(let py=0; py<CHAR_H; py++){
+            for(let px=0; px<CHAR_W; px++){
+                const bit = (rows[py] >> (CHAR_W-1-px)) & 1;
+                pctx.fillStyle = bit ? "black" : "#ddd";
+                pctx.fillRect(
+                    (cx*CHAR_W+px)*PIXEL_SIZE,
+                    (cy*CHAR_H+py)*PIXEL_SIZE,
+                    PIXEL_SIZE-1,
+                    PIXEL_SIZE-1
+                );
+            }
+        }
+    });
+
+    drawGridLines(pctx, previewCanvas);
+}
+
+function updateStats(){
+    const totalPixels = cellData.length * CHAR_W * CHAR_H;
+    const totalError = assignment.reduce((s,a) => s + a.dist, 0);
+    const accuracy = totalPixels > 0 ? (100 * (1 - totalError/totalPixels)).toFixed(1) : "100.0";
+    document.getElementById("stats").innerText =
+        `Custom slots used: ${selectedCustom.length}/8  |  Mismatched pixels: ${totalError}/${totalPixels}  |  Approx. accuracy: ${accuracy}%`;
+}
+
+function escapeForArduinoString(ch){
+    if(ch === "\\") return "\\\\";
+    if(ch === '"') return '\\"';
+    return ch;
+}
+
+function generateTextCode(){
+    if(assignment.length === 0){
+        alert("Click 'Analyze Drawing & Suggest Custom Characters' first.");
+        return;
+    }
+
+    let code = "// Auto-generated by the LCD Art-to-Text converter\n";
+    code += "// Uses the LiquidCrystal library's built-in font plus up to 8 custom\n";
+    code += "// CGRAM characters (createChar slots 0-7).\n\n";
+    code += "#include <LiquidCrystal.h>\n";
+    code += "// TODO: set this to your actual pin wiring\n";
+    code += "LiquidCrystal lcd(/* rs, en, d4, d5, d6, d7 */);\n\n";
+
+    selectedCustom.forEach((pat, i) => {
+        code += `byte customChar${i}[8] = {\n`;
+        pat.forEach(rowVal => {
+            code += `  B000${rowVal.toString(2).padStart(5,'0')},\n`;
+        });
+        code += `};\n\n`;
+    });
+
+    code += "void setup(){\n";
+    code += "  lcd.begin(20, 4);\n";
+    selectedCustom.forEach((_, i) => {
+        code += `  lcd.createChar(${i}, customChar${i});\n`;
+    });
+    code += "\n";
+
+    for(let row=0; row<LCD_ROWS; row++){
+        code += `  lcd.setCursor(0, ${row});\n`;
+        let buffer = "";
+        for(let col=0; col<LCD_COLS; col++){
+            const a = assignment[row*LCD_COLS + col];
+            if(a.type === "std"){
+                buffer += escapeForArduinoString(a.value);
+            } else {
+                if(buffer.length > 0){
+                    code += `  lcd.print("${buffer}");\n`;
+                    buffer = "";
+                }
+                code += `  lcd.write(byte(${a.value}));\n`;
+            }
+        }
+        if(buffer.length > 0){
+            code += `  lcd.print("${buffer}");\n`;
+        }
+    }
+
+    code += "}\n\nvoid loop(){\n  // nothing to do, screen is static\n}\n";
+
+    document.getElementById("textOutput").value = code;
+}
+
+/* =====================================================================
+   MICROPYTHON .lcd FILE EXPORT
+   ---------------------------------------------------------------------
+   Format (plain text, both sections optional/skippable by older parsers):
+
+     # LCD ART EXPORT v1
+     # CUSTOM CHARS: <n>
+     B00001010      <- 8 of these lines per custom char, n chars total
+     ...
+     # GRID: <rows> rows x <cols> cols
+     72 69 76 76 79 32 ...   <- one line per row, space-separated codes
+
+   Grid codes: 0-7 means "custom char in that CGRAM slot", any value >=32
+   means "standard ASCII codepoint, print as a normal character". This is
+   unambiguous because the built-in font matcher only ever returns
+   printable ASCII (codepoint 32 and up), so codes 0-7 can never mean
+   anything except a custom slot.
+
+   Lines starting with "B" outside a fresh "CUSTOM CHARS" header are still
+   exactly what an existing simple parser (one that just collects every
+   line starting with "B" into 8-line blocks) expects, so this file stays
+   backwards compatible with that kind of loader.
+   ===================================================================== */
+
+function buildMicropythonFileContent(){
+    let out = "";
+    out += "# LCD ART EXPORT v1\n";
+    out += "# Generated by LCD Art-to-Text converter\n";
+    out += `# CUSTOM CHARS: ${selectedCustom.length}\n`;
+
+    selectedCustom.forEach(pat => {
+        pat.forEach(rowVal => {
+            out += "B" + rowVal.toString(2).padStart(8,'0') + "\n";
+        });
+    });
+
+    out += `# GRID: ${LCD_ROWS} rows x ${LCD_COLS} cols\n`;
+    out += "# 0-7 = custom char slot, 32+ = standard ASCII code point\n";
+
+    for(let row=0; row<LCD_ROWS; row++){
+        const codes = [];
+        for(let col=0; col<LCD_COLS; col++){
+            const a = assignment[row*LCD_COLS + col];
+            codes.push(a.type === "std" ? a.value.charCodeAt(0) : a.value);
+        }
+        out += codes.join(" ") + "\n";
+    }
+
+    return out;
+}
+
+function downloadMicropythonFile(){
+    if(assignment.length === 0){
+        alert("Click 'Analyze Drawing & Suggest Custom Characters' first.");
+        return;
+    }
+
+    const content = buildMicropythonFileContent();
+    document.getElementById("micropythonOutput").value = content;
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lcd_art.lcd";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 </script>
-
 </body>
 </html>
